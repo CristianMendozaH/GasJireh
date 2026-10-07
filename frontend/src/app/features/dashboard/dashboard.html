@@ -1,0 +1,165 @@
+<header class="top">
+  <div>
+    <h1>DASHBOARD</h1>
+    <p class="date">LUNES, 19 DE OCTUBRE 2026</p>
+  </div>
+  <div class="acts">
+    <button class="btn p" (click)="abrirModalVenta()"><i class="fa-solid fa-plus"></i>Nueva Venta</button>
+    <button class="btn s" (click)="abrirModalAbono()"><i class="fa-solid fa-hand-holding-dollar"></i>Registrar
+      Abono</button>
+  </div>
+</header>
+
+<section class="grid4">
+  <div class="card kpi">
+    <div class="lb">VENTAS HOY — CONTADO<span class="ic" style="background:var(--gr-l);color:var(--gr)"><i
+          class="fa-solid fa-money-bill-wave"></i></span></div>
+    <div class="v">{{ money(sumVentas(ventasContado)) }}</div>
+    <div class="sub">{{ ventasContado.length }} {{ ventasContado.length === 1 ? 'transacción' : 'transacciones' }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="lb">VENTAS HOY — CRÉDITO<span class="ic" style="background:var(--or-l);color:var(--or)"><i
+          class="fa-solid fa-credit-card"></i></span></div>
+    <div class="v">{{ money(sumVentas(ventasCredito)) }}</div>
+    <div class="sub">{{ ventasCredito.length }} {{ ventasCredito.length === 1 ? 'transacción' : 'transacciones' }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="lb">CUENTAS POR COBRAR<span class="ic" style="background:var(--rd-l);color:var(--rd)"><i
+          class="fa-solid fa-file-invoice-dollar"></i></span></div>
+    <div class="v">{{ money(cxc) }}</div>
+    <div class="sub rd">{{ money(vencido) }} vencido</div>
+  </div>
+  <div class="card kpi">
+    <div class="lb">STOCK — CILINDROS LLENOS<span class="ic" style="background:var(--gr-l);color:var(--gr)"><i
+          class="fa-solid fa-gas-pump"></i></span></div>
+    <div class="v">{{ totalStockLleno }} uds</div>
+    <div class="sub">25lb · 35lb · 100lb</div>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>STOCK DE CILINDROS <a (click)="toast('Vista Inventario (prototipo)')">Ver inventario</a></h2>
+  <div class="grid3">
+    @for (k of stockKeys; track k) {
+    <div class="card stk">
+      <h3><i class="fa-solid fa-fire-burner"></i>{{ k }} lb</h3>
+      <div class="r">
+        <div class="b full"><span>Llenos</span><strong>{{ stock[k].f }}</strong></div>
+        <div class="b empty"><span>Vacíos</span><strong>{{ stock[k].v }}</strong></div>
+      </div>
+    </div>
+    }
+  </div>
+</section>
+
+<section class="sec">
+  <h2>TRANSACCIONES RECIENTES
+    @if (tx.length === 0) {
+    <a (click)="cargarDemo()"><i class="fa-solid fa-wand-magic-sparkles"></i> Cargar datos de ejemplo</a>
+    }
+  </h2>
+  <div class="card tw">
+    <table>
+      <thead>
+        <tr>
+          <th>Ticket</th>
+          <th>Cliente</th>
+          <th>Productos</th>
+          <th>Total</th>
+          <th>Método</th>
+          <th>Hora</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of tx; track t.id) {
+        <tr>
+          <td class="tk">{{ t.id }}</td>
+          <td>{{ t.cli }}</td>
+          <td>{{ t.prod }}</td>
+          <td><b>{{ money(t.total) }}</b></td>
+          <td><span class="tag" [class.c]="t.m === 'Contado'" [class.cr]="t.m === 'Crédito'">{{ t.m }}</span></td>
+          <td>{{ t.h }}</td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="6">
+            <div class="none">
+              <i class="fa-regular fa-folder-open"></i>No hay transacciones registradas
+            </div>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Modal Venta -->
+<div class="ov" [class.on]="modalVenta">
+  <div class="md">
+    <h3>Nueva venta</h3>
+    <div class="fld">
+      <label>Cliente</label>
+      <select [(ngModel)]="vCli">
+        <option value="Cliente de mostrador">Cliente de mostrador</option>
+        <option value="Tienda Doña Marta">Tienda Doña Marta</option>
+        <option value="Comedor San José">Comedor San José</option>
+        <option value="Restaurante El Fogón">Restaurante El Fogón</option>
+      </select>
+    </div>
+    <div class="two">
+      <div class="fld">
+        <label>Cilindro</label>
+        <select [(ngModel)]="vProd">
+          <option value="25">25 lb · Q 125</option>
+          <option value="35">35 lb · Q 170</option>
+          <option value="100">100 lb · Q 480</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label>Cantidad</label>
+        <input type="number" [(ngModel)]="vQty" min="1">
+      </div>
+    </div>
+    <div class="fld">
+      <label>Método de pago</label>
+      <select [(ngModel)]="vMet">
+        <option value="Contado">Contado</option>
+        <option value="Crédito">Crédito</option>
+      </select>
+    </div>
+    <div class="mf">
+      <button class="btn s" (click)="cerrarModales()">Cancelar</button>
+      <button class="btn p" (click)="guardarVenta()">Guardar venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Abono -->
+<div class="ov" [class.on]="modalAbono">
+  <div class="md">
+    <h3>Registrar abono</h3>
+    <div class="fld">
+      <label>Cliente</label>
+      <select [(ngModel)]="aCli">
+        <option value="Tienda Doña Marta">Tienda Doña Marta</option>
+        <option value="Comedor San José">Comedor San José</option>
+        <option value="Restaurante El Fogón">Restaurante El Fogón</option>
+      </select>
+    </div>
+    <div class="fld">
+      <label>Monto del abono (Q)</label>
+      <input type="number" [(ngModel)]="aMonto" min="1">
+    </div>
+    <div class="mf">
+      <button class="btn s" (click)="cerrarModales()">Cancelar</button>
+      <button class="btn p" (click)="guardarAbono()">Guardar abono</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" [class.on]="toastVisible">
+  <i class="fa-solid fa-circle-check"></i>
+  <span>{{ toastMsg }}</span>
+</div>

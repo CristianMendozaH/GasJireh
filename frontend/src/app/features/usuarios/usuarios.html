@@ -1,0 +1,168 @@
+<header class="top">
+  <div>
+    <h1>GESTIÓN DE USUARIOS</h1>
+    <p class="subt">Administra las cuentas de acceso al sistema</p>
+  </div>
+  <button class="btn p" (click)="openModal(null)"><i class="fa-solid fa-plus"></i>Nuevo Usuario</button>
+</header>
+
+<section class="grid3">
+  <div class="card kpi">
+    <div class="lb">TOTAL USUARIOS<span class="ic" style="background:var(--or-l);color:var(--or)"><i
+          class="fa-solid fa-users"></i></span></div>
+    <div class="v">{{ totalUsuarios }}</div>
+  </div>
+  <div class="card kpi a">
+    <div class="lb">USUARIOS ACTIVOS<span class="ic" style="background:var(--gr-l);color:var(--gr)"><i
+          class="fa-solid fa-user-check"></i></span></div>
+    <div class="v">{{ usuariosActivos }}</div>
+  </div>
+  <div class="card kpi i">
+    <div class="lb">USUARIOS INACTIVOS<span class="ic" style="background:var(--rd-l);color:var(--rd)"><i
+          class="fa-solid fa-user-slash"></i></span></div>
+    <div class="v">{{ usuariosInactivos }}</div>
+  </div>
+</section>
+
+<div class="card tw">
+  <table>
+    <thead>
+      <tr>
+        <th>USUARIO</th>
+        <th>NOMBRE COMPLETO</th>
+        <th>NOMBRE DE USUARIO</th>
+        <th>ROL</th>
+        <th>ESTADO</th>
+        <th>ACCIONES</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (u of users; track u.user; let i = $index) {
+      <tr [class.off]="!u.active" [class.new]="u === newest">
+        <td>
+          <div class="avc" [ngClass]="u.role">{{ initials(u.name) }}</div>
+        </td>
+        <td class="nm">{{ u.name }}</td>
+        <td class="un">{{ u.user }}</td>
+        <td><span class="tag" [ngClass]="u.role">{{ u.role }}</span></td>
+        <td><span class="tag" [class.on]="u.active" [class.of]="!u.active">{{ u.active ? 'Activo' : 'Inactivo' }}</span>
+        </td>
+        <td>
+          <div class="ac">
+            <button class="ic-b" (click)="openModal(i)" title="Editar" [attr.aria-label]="'Editar ' + u.name">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="ic-b tg" (click)="toggleEstado(i)" [disabled]="u.user === SELF"
+              [title]="u.user === SELF ? 'No disponible para tu propia cuenta' : (u.active ? 'Desactivar' : 'Activar')">
+              <i class="fa-solid" [class.fa-user-slash]="u.active" [class.fa-user-check]="!u.active"></i>
+            </button>
+            <button class="ic-b dl" (click)="confirmarEliminar(i)" [disabled]="u.user === SELF"
+              [title]="u.user === SELF ? 'No disponible para tu propia cuenta' : 'Eliminar'">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      } @empty {
+      <tr>
+        <td colspan="6">
+          <div class="none">
+            <i class="fa-regular fa-folder-open"></i>No hay usuarios registrados
+          </div>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal crear / editar -->
+<div class="ov" [class.on]="modalVisible">
+  <div class="md" role="dialog" aria-labelledby="mT">
+    <div class="mh">
+      <h3 id="mT">{{ editing === null ? 'NUEVO USUARIO' : 'EDITAR USUARIO' }}</h3>
+      <button class="x" (click)="closeModal()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="fld" [class.bad]="!!eN">
+      <label for="uN">NOMBRE COMPLETO</label>
+      <input type="text" id="uN" [(ngModel)]="formName" (input)="eN = ''" (keydown.enter)="guardarUsuario()"
+        placeholder="Ej. María López" autocomplete="off">
+      <div class="err">{{ eN }}</div>
+    </div>
+
+    <div class="fld" [class.bad]="!!eU">
+      <label for="uU">NOMBRE DE USUARIO</label>
+      <input type="text" id="uU" [(ngModel)]="formUser" (input)="eU = ''" (keydown.enter)="guardarUsuario()"
+        [readonly]="isSelfEditing" placeholder="Ej. maria" autocomplete="off" autocapitalize="off">
+      <div class="err">{{ eU }}</div>
+    </div>
+
+    <div class="fld" [class.bad]="!!eP">
+      <label for="uP" id="lP">
+        {{ editing === null ? 'CONTRASEÑA' : 'NUEVA CONTRASEÑA' }}
+        <em *ngIf="editing !== null">(opcional)</em>
+      </label>
+      <div class="pw">
+        <input [type]="showPw ? 'text' : 'password'" id="uP" [(ngModel)]="formPw" (input)="eP = ''"
+          (keydown.enter)="guardarUsuario()" autocomplete="new-password"
+          [placeholder]="editing === null ? 'Mínimo 8 caracteres' : 'Déjala en blanco para conservar la actual'">
+        <button type="button" class="eye" (click)="showPw = !showPw"
+          [title]="showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+          <i class="fa-solid" [class.fa-eye-slash]="showPw" [class.fa-eye]="!showPw"></i>
+        </button>
+      </div>
+      <div class="err">{{ eP }}</div>
+    </div>
+
+    <div class="fld" [class.bad]="!!eR">
+      <label for="uR">ROL</label>
+      <select id="uR" [(ngModel)]="formRole" (change)="eR = ''" [disabled]="isSelfEditing">
+        <option value="">Selecciona un rol</option>
+        <option value="Administrador">Administrador</option>
+        <option value="Vendedor">Vendedor</option>
+        <option value="Bodeguero">Bodeguero</option>
+      </select>
+      <div class="err">{{ eR }}</div>
+    </div>
+
+    <div class="sw">
+      <div>
+        <b>USUARIO ACTIVO</b>
+        <small>{{ formActive ? 'Puede iniciar sesión en el sistema' : 'Acceso bloqueado al sistema' }}</small>
+      </div>
+      <label class="tgl">
+        <input type="checkbox" [(ngModel)]="formActive" [disabled]="isSelfEditing" aria-label="Usuario activo">
+        <i></i>
+      </label>
+    </div>
+
+    <div class="mf" style="margin-top:22px">
+      <button class="btn p big" (click)="guardarUsuario()">
+        {{ editing === null ? 'CREAR USUARIO' : 'GUARDAR CAMBIOS' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmar eliminación -->
+<div class="ov" [class.on]="modalDelVisible">
+  <div class="md warn" role="alertdialog" aria-labelledby="dT">
+    <div class="ck"><i class="fa-solid fa-trash-can"></i></div>
+    <h3 id="dT">ELIMINAR USUARIO</h3>
+    <p class="sub" *ngIf="delIdx !== null">
+      Se eliminará la cuenta de <b>{{ users[delIdx].name }}</b> ({{ users[delIdx].user }}). Esta acción no se puede
+      deshacer.
+    </p>
+    <div class="mf">
+      <button class="btn s" (click)="modalDelVisible = false">Cancelar</button>
+      <button class="btn d" (click)="eliminarUsuario()"><i class="fa-solid fa-trash-can"></i>Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" [class.on]="toastVisible">
+  <i class="fa-solid fa-circle-check"></i>
+  <span>{{ toastMsg }}</span>
+</div>

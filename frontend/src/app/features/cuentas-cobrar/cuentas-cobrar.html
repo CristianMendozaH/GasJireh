@@ -1,0 +1,122 @@
+<h1>CUENTAS POR COBRAR</h1>
+
+<!-- Indicadores KPI -->
+<section class="grid3">
+  <div class="card kpi t">
+    <div class="lb">
+      TOTAL DEUDA ACTIVA
+      <span class="ic" style="background:var(--or-l);color:var(--or)">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+      </span>
+    </div>
+    <div class="v">{{ money(kpi.tot) }}</div>
+  </div>
+  <div class="card kpi v2">
+    <div class="lb">
+      DEUDA VENCIDA
+      <span class="ic" style="background:var(--rd-l);color:var(--rd)">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </span>
+    </div>
+    <div class="v">{{ money(kpi.ven) }}</div>
+  </div>
+  <div class="card kpi c">
+    <div class="lb">
+      COBROS HOY
+      <span class="ic" style="background:var(--gr-l);color:var(--gr)">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </span>
+    </div>
+    <div class="v">{{ money(kpi.cob) }}</div>
+  </div>
+</section>
+
+<!-- Filtros de Estado -->
+<div class="filters">
+  <button class="f" [class.on]="filter === 'all'" (click)="setFilter('all')">
+    Todas <small>{{ rows.length }}</small>
+  </button>
+  <button class="f" [class.on]="filter === 'Vencido'" (click)="setFilter('Vencido')">
+    Vencidas <small>{{ countByStatus('Vencido') }}</small>
+  </button>
+  <button class="f" [class.on]="filter === 'Pendiente'" (click)="setFilter('Pendiente')">
+    Pendientes <small>{{ countByStatus('Pendiente') }}</small>
+  </button>
+  <button class="f" [class.on]="filter === 'Al Día'" (click)="setFilter('Al Día')">
+    Al Día <small>{{ countByStatus('Al Día') }}</small>
+  </button>
+</div>
+
+<!-- Tabla de Cuentas por Cobrar -->
+<div class="card tw">
+  <table>
+    <thead>
+      <tr>
+        <th>CLIENTE</th>
+        <th>TELÉFONO</th>
+        <th>DEUDA TOTAL</th>
+        <th>ÚLTIMO PAGO</th>
+        <th>ESTADO</th>
+        <th>ACCIONES</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let r of filteredRows">
+        <td class="cl">{{ r.name }}</td>
+        <td>{{ r.tel }}</td>
+        <td class="debt" [class.z]="r.debt === 0">{{ money(r.debt) }}</td>
+        <td>{{ r.last }}</td>
+        <td>
+          <span class="tag" [ngClass]="cls[r.st]">{{ r.st }}</span>
+        </td>
+        <td>
+          <button *ngIf="r.debt > 0" class="ab" (click)="abrirModalAbono(r)">
+            <i class="fa-solid fa-hand-holding-dollar"></i>Registrar Abono
+          </button>
+          <span *ngIf="r.debt === 0" class="dash">—</span>
+        </td>
+      </tr>
+      <tr *ngIf="filteredRows.length === 0">
+        <td colspan="6">
+          <div class="none">
+            <i class="fa-regular fa-folder-open"></i>
+            No hay cuentas en esta categoría
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal para Registrar Abono -->
+<div class="ov" [class.on]="modalAbonoVisible" (click)="cerrarModalPorBackdrop($event)">
+  <div class="md">
+    <h3>REGISTRAR ABONO</h3>
+    <div class="info" *ngIf="cuentaSeleccionada">
+      <b>{{ cuentaSeleccionada.name }}</b>
+      <div>
+        <span>Deuda actual</span>
+        <strong>{{ money(cuentaSeleccionada.debt) }}</strong>
+      </div>
+    </div>
+    <div class="fld">
+      <label for="mMonto">Monto del abono</label>
+      <div class="inp">
+        <span>Q</span>
+        <input type="number" id="mMonto" step="0.01" min="0" [(ngModel)]="montoAbono"
+          (keydown.enter)="guardarAbono()" />
+      </div>
+    </div>
+    <div class="err">{{ errorMsg }}</div>
+    <div class="mf">
+      <button class="btn s" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn p" (click)="guardarAbono()">Guardar abono</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de Notificación -->
+<div class="toast" [class.on]="toastVisible">
+  <i class="fa-solid fa-circle-check"></i>
+  <span>{{ toastMsg }}</span>
+</div>

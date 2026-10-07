@@ -1,0 +1,137 @@
+<header class="top">
+  <h1>CONTROL DE INVENTARIO</h1>
+  <button class="btn g" (click)="abrirModalEntrada()">
+    <i class="fa-solid fa-plus"></i>Entrada de Proveedor
+  </button>
+</header>
+
+<section class="sec">
+  <h2>STOCK</h2>
+  <div class="grid3">
+    <div *ngFor="let k of stockKeys" class="card stk" [class.up]="updatedKey === k">
+      <h3><i class="fa-solid fa-fire-burner"></i>{{ k }} lb</h3>
+      <div class="r">
+        <div class="b full">
+          <span>Cilindros llenos</span>
+          <strong>{{ stock[k].f }}</strong>
+        </div>
+        <div class="b empty">
+          <span>Cilindros vacíos</span>
+          <strong>{{ stock[k].v }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="hd">
+    <h2>REGISTRO DE MOVIMIENTOS</h2>
+    <div class="flt">
+      <select [(ngModel)]="fTipo" aria-label="Filtrar por tipo">
+        <option value="">Todos los tipos</option>
+        <option value="Entrada">Entrada</option>
+        <option value="Salida">Salida</option>
+      </select>
+      <select [(ngModel)]="fTam" aria-label="Filtrar por tamaño">
+        <option value="">Todos los tamaños</option>
+        <option value="25 lb">25 lb</option>
+        <option value="35 lb">35 lb</option>
+        <option value="100 lb">100 lb</option>
+      </select>
+      <input type="date" [(ngModel)]="fFecha" aria-label="Filtrar por fecha">
+      <button class="clr" [class.on]="hasFilters" (click)="limpiarFiltros()">Limpiar</button>
+    </div>
+  </div>
+
+  <div class="cnt">
+    {{ filteredMovimientos.length }} {{ filteredMovimientos.length === 1 ? 'movimiento' : 'movimientos' }}
+  </div>
+
+  <div class="card tw">
+    <table>
+      <thead>
+        <tr>
+          <th>FECHA</th>
+          <th>TIPO</th>
+          <th>TAMAÑO</th>
+          <th>CANTIDAD</th>
+          <th>USUARIO</th>
+          <th>NOTA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of filteredMovimientos" [class.new]="m === newestMov">
+          <td class="dt">{{ m.d }}</td>
+          <td>
+            <span class="tag" [class.e]="m.t === 'Entrada'" [class.s]="m.t === 'Salida'">
+              {{ m.t }}
+            </span>
+          </td>
+          <td>{{ m.s }}</td>
+          <td class="q">{{ m.q }}</td>
+          <td>{{ m.u }}</td>
+          <td class="nt">{{ m.n }}</td>
+        </tr>
+        <tr *ngIf="filteredMovimientos.length === 0">
+          <td colspan="6">
+            <div class="none">
+              <i class="fa-regular fa-folder-open"></i>
+              No hay movimientos con esos filtros
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Modal Entrada de Proveedor -->
+<div class="ov" [class.on]="modalVisible" (click)="cerrarModalPorBackdrop($event)">
+  <div class="md" role="dialog" aria-labelledby="mT">
+    <h3 id="mT">ENTRADA DE PROVEEDOR</h3>
+    <p>Registra los cilindros llenos recibidos. El stock se actualiza al guardar.</p>
+
+    <div class="two">
+      <div class="fld">
+        <label for="mTam">Tamaño</label>
+        <select id="mTam" [(ngModel)]="mTam">
+          <option value="25">25 lb</option>
+          <option value="35">35 lb</option>
+          <option value="100">100 lb</option>
+        </select>
+      </div>
+      <div class="fld" [class.bad]="isQtyBad">
+        <label for="mQty">Cantidad</label>
+        <input type="number" id="mQty" min="1" step="1" placeholder="0" [(ngModel)]="mQty" (input)="isQtyBad = false"
+          (keydown.enter)="guardarEntrada()" />
+        <div class="err">Ingresa una cantidad entera mayor a 0</div>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label for="mProv">Proveedor</label>
+      <select id="mProv" [(ngModel)]="mProv">
+        <option value="Tropigas">Tropigas</option>
+        <option value="Gas Zeta">Gas Zeta</option>
+        <option value="Gasolinera Central">Gasolinera Central</option>
+      </select>
+    </div>
+
+    <label class="chk">
+      <input type="checkbox" [(ngModel)]="mSwap">
+      <span>Entregué cilindros vacíos a cambio (se descuentan de los vacíos)</span>
+    </label>
+
+    <div class="mf">
+      <button class="btn s" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn g" (click)="guardarEntrada()">Guardar entrada</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" [class.on]="toastVisible">
+  <i class="fa-solid fa-circle-check"></i>
+  <span>{{ toastMsg }}</span>
+</div>

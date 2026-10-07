@@ -1,0 +1,103 @@
+<div class="login-wrapper">
+  <!-- Lado izquierdo: identidad -->
+  <aside class="brand" aria-hidden="false">
+    <span class="deco d1"></span><span class="deco d2"></span>
+    <span class="cyl c1"></span><span class="cyl c2"></span>
+    <div class="brand-in">
+      <div class="logo-box">
+        <i class="fa-solid fa-fire-flame-curved"></i>
+      </div>
+      <h2>GAS JIREH</h2>
+      <p class="sub">Sistema de Gestión de Ventas e Inventario</p>
+      <div class="rule"></div>
+      <p class="phrase">Controla tus ventas, inventario y cuentas desde un solo lugar.</p>
+    </div>
+  </aside>
+
+  <!-- Lado derecho: formulario -->
+  <main class="side">
+    <div class="mlogo">
+      <div class="logo-box">
+        <i class="fa-solid fa-fire-flame-curved"></i>
+      </div>
+      <b>GAS JIREH</b>
+    </div>
+
+    <section class="card">
+      <h1>Bienvenido</h1>
+      <p class="lead">Inicia sesión para continuar</p>
+
+      <form (ngSubmit)="onSubmit()" novalidate>
+        <div class="fld" [class.bad]="errUsuario">
+          <label for="u">USUARIO</label>
+          <div class="ctl">
+            <i class="fa-regular fa-user l"></i>
+            <input type="text" id="u" name="usuario" [(ngModel)]="usuario" (input)="errUsuario = false"
+              placeholder="Ingresa tu usuario" autocomplete="username" autocapitalize="off" spellcheck="false">
+          </div>
+          @if (errUsuario) {
+          <div class="err">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>El usuario es obligatorio.</span>
+          </div>
+          }
+        </div>
+
+        <div class="fld" [class.bad]="errPassword">
+          <label for="p">CONTRASEÑA</label>
+          <div class="ctl pw">
+            <i class="fa-solid fa-lock l"></i>
+            <input [type]="mostrarPassword ? 'text' : 'password'" id="p" name="password" [(ngModel)]="password"
+              (input)="errPassword = false" placeholder="Ingresa tu contraseña" autocomplete="current-password">
+            <button type="button" class="eye" (click)="togglePassword()"
+              [attr.aria-label]="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              title="Mostrar / ocultar contraseña">
+              <i class="fa-regular" [class.fa-eye-slash]="mostrarPassword" [class.fa-eye]="!mostrarPassword"></i>
+            </button>
+          </div>
+          @if (errPassword) {
+          <div class="err">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>La contraseña es obligatoria.</span>
+          </div>
+          }
+        </div>
+
+        <div class="row">
+          <label class="chk">
+            <input type="checkbox" name="recordarme" [(ngModel)]="recordarme">
+            <span class="bx"><i class="fa-solid fa-check"></i></span>
+            Recordarme
+          </label>
+          <a href="#" class="forgot" (click)="toggleNota($event)">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        @if (mostrarNota) {
+        <div class="note on">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>Las cuentas son administradas por el Administrador del sistema. Solicítale que restablezca tu
+            contraseña.</span>
+        </div>
+        }
+
+        <button type="submit" class="go" [class.load]="busy" [class.ok]="exito" [disabled]="busy">
+          @if (busy) {
+          <span class="spin"></span>INGRESANDO...
+          } @else if (exito) {
+          <i class="fa-solid fa-check"></i>ACCESO CONCEDIDO
+          } @else {
+          INICIAR SESIÓN
+          }
+        </button>
+
+        @if (exito) {
+        <div class="okmsg on" role="status">
+          <i class="fa-solid fa-circle-check"></i>Inicio de sesión correcto
+        </div>
+        }
+      </form>
+    </section>
+
+    <footer class="foot">Gas Jireh © 2026<span>Sistema de Gestión</span></footer>
+  </main>
+</div>

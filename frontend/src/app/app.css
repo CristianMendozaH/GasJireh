@@ -1,0 +1,249 @@
+:root {
+  --or: #ff5a00;
+  --or-d: #e04f00;
+  --or-l: #fff0e8;
+  --bg: #f5f6fa;
+  --card: #ffffff;
+  --tx: #2d3142;
+  --mut: #8a8fa3;
+  --bd: #eceef4;
+  --gr: #1fa971;
+  --gr-l: #e6f6ef;
+  --rd: #e5484d;
+  --rd-l: #fdecee;
+  --sh: 0 1px 2px rgba(20, 24, 40, .05);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+  display: flex;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--or);
+  outline-offset: 2px;
+}
+
+/* Sidebar - Fondo blanco idéntico al prototipo */
+.sb {
+  width: 248px;
+  background: var(--card);
+  border-right: 1px solid var(--bd);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  transition: transform .25s;
+}
+
+.logo {
+  height: 84px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.logo-m {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--or);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+}
+
+.logo b {
+  font-size: 18px;
+  letter-spacing: .5px;
+  display: block;
+  line-height: 1.1;
+}
+
+.logo small {
+  color: var(--mut);
+  font-size: 11px;
+}
+
+.nav {
+  flex: 1;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  color: #5b6075;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background .15s, color .15s;
+}
+
+.nav a i {
+  width: 20px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.nav a:hover {
+  background: var(--bg);
+}
+
+/* Estilo para la opción seleccionada */
+.nav a.on,
+.nav a.on:hover,
+.nav a.router-link-active {
+  background-color: var(--or) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.nav a.on i,
+.nav a.router-link-active i {
+  color: #ffffff !important;
+}
+
+/* Panel inferior de usuario */
+.user {
+  border-top: 1px solid var(--bd);
+  padding: 16px 18px;
+}
+
+.u-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.av {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--or);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+}
+
+.u-row b {
+  font-size: 14px;
+  display: block;
+}
+
+.u-row small {
+  color: var(--mut);
+  font-size: 12px;
+}
+
+.out {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #5b6075;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.out:hover {
+  border-color: var(--rd);
+  color: var(--rd);
+  background: var(--rd-l);
+}
+
+/* Área de contenido */
+.main {
+  margin-left: 248px;
+  flex: 1;
+  padding: 36px 40px 48px;
+  min-width: 0;
+  background-color: var(--bg);
+}
+
+.main.full-width {
+  margin-left: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+.burger {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: var(--sh);
+  margin-bottom: 14px;
+}
+
+.scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 34, 50, .35);
+  z-index: 20;
+}
+
+/* Diseño Responsivo (Móviles / Tablets) */
+@media(max-width: 900px) {
+  .sb {
+    transform: translateX(-100%);
+  }
+
+  .sb.on {
+    transform: none;
+  }
+
+  .scrim.on {
+    display: block;
+  }
+
+  .main {
+    margin-left: 0;
+    padding: 20px 18px 40px;
+  }
+
+  .burger {
+    display: grid;
+    place-items: center;
+  }
+}
+
+@media(prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,191 @@
+<header class="top">
+  <h1>REGISTRAR VENTA</h1>
+  <button class="btn o" (click)="openPriceModal()">
+    <i class="fa-solid fa-pen"></i>Editar precios
+  </button>
+</header>
+
+<div class="lay">
+  <!-- Selección de Productos -->
+  <section class="sec">
+    <h2>PRODUCTOS</h2>
+    <div class="prods">
+      @for (p of products(); track p.id) {
+      @let left = p.stock - inCart(p.id);
+      <button class="card prod" [class.out-s]="left <= 0" (click)="addToCart(p)" [disabled]="left <= 0">
+        <div class="pi"><i class="fa-solid fa-fire-burner"></i></div>
+        <h3>{{ p.name }}</h3>
+        <div class="sub">Cilindro Gas</div>
+        <div class="pr">Q {{ p.price | number:'1.2-2' }}</div>
+        <span class="badge" [class.low]="left <= 5">
+          {{ left <= 0 ? 'Sin stock' : left + ' en stock' }} </span>
+      </button>
+      }
+    </div>
+  </section>
+
+  <!-- Carrito / Detalle de la Venta -->
+  <aside class="card cart">
+    <h2>CARRITO</h2>
+
+    <!-- Modalidad Contado/Crédito -->
+    <div class="tabs">
+      <button [class.on]="mode() === 'Contado'" (click)="setMode('Contado')">
+        Contado
+      </button>
+      <button [class.on]="mode() === 'Crédito'" [class.cr]="mode() === 'Crédito'" (click)="setMode('Crédito')">
+        Crédito
+      </button>
+    </div>
+
+    <!-- Sección de Búsqueda de Cliente a Crédito -->
+    @if (mode() === 'Crédito') {
+    <div class="crd on">
+      @if (!selectedClient()) {
+      <div class="sr">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Buscar cliente autorizado..." autocomplete="off" [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)" (focus)="onSearchFocus()" (blur)="onSearchBlur()">
+        @if (showSearchResults()) {
+        <div class="res on">
+          @for (c of filteredClients(); track c.name) {
+          <button (click)="selectClient(c)">
+            <b>{{ c.name }}</b>
+            <small>Crédito disponible: Q {{ getAvailableCredit(c) | number:'1.2-2' }}</small>
+          </button>
+          } @empty {
+          <div class="nr">Sin clientes con crédito autorizado para "{{ searchQuery() }}"</div>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      <!-- Detalle de Crédito del Cliente Seleccionado -->
+      @if (selectedClient()) {
+      <div class="sel">
+        <div class="h">
+          <div>
+            <small>Cliente seleccionado</small>
+            <b>{{ selectedClient()?.name }}</b>
+          </div>
+          <button class="chg" (click)="removeSelectedClient()">Cambiar</button>
+        </div>
+        <div class="row">
+          <span>Límite</span>
+          <strong>Q {{ selectedClient()?.limit | number:'1.2-2' }}</strong>
+        </div>
+        <div class="row">
+          <span>Deuda actual</span>
+          <strong>Q {{ selectedClient()?.debt | number:'1.2-2' }}</strong>
+        </div>
+        <div class="row av2">
+          <span>Disponible</span>
+          <strong>Q {{ getAvailableCredit(selectedClient()!) | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+      }
+
+      <!-- Alerta de Exceso de Crédito -->
+      @if (overCreditLimit()) {
+      <div class="alert on">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>
+          El total supera el crédito disponible por Q {{ excessAmount() | number:'1.2-2' }}. Reduce productos o elige
+          otro cliente.
+        </span>
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Items en el Carrito -->
+    <div class="items">
+      @for (item of cart(); track $index) {
+      <div class="it">
+        <div class="nm">
+          <b>{{ item.name }}</b>
+          <small>Q {{ item.price | number:'1.2-2' }} c/u</small>
+        </div>
+        <div class="qty">
+          <button (click)="updateQty($index, -1)" aria-label="Disminuir"><i class="fa-solid fa-minus"></i></button>
+          <span>{{ item.qty }}</span>
+          <button (click)="updateQty($index, 1)" aria-label="Aumentar"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <button class="del" (click)="removeItem($index)" aria-label="Eliminar"><i
+            class="fa-solid fa-trash-can"></i></button>
+      </div>
+      } @empty {
+      <div class="none">
+        <i class="fa-solid fa-cart-shopping"></i>
+        Selecciona productos
+      </div>
+      }
+    </div>
+
+    <!-- Pie de Carrito / Finalizar Venta -->
+    <div class="foot">
+      <div class="tot">
+        <span>Total</span>
+        <strong [class.bad]="overCreditLimit()">Q {{ total() | number:'1.2-2' }}</strong>
+      </div>
+      <button class="btn p big"
+        [disabled]="cart().length === 0 || (mode() === 'Crédito' && (!selectedClient() || overCreditLimit()))"
+        (click)="completeSale()">
+        COMPLETAR VENTA
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- Modal para Edición de Precios -->
+@if (showPriceModal()) {
+<div class="ov on">
+  <div class="md">
+    <h3>ACTUALIZAR PRECIOS</h3>
+    <p>Los nuevos precios se aplicarán a las próximas ventas.</p>
+
+    <div class="fr">
+      <label for="p25">Cilindro de 25 lb</label>
+      <div class="inp"><span>Q</span><input type="number" id="p25" step="0.01" min="0" [(ngModel)]="p25Price"></div>
+    </div>
+    <div class="fr">
+      <label for="p35">Cilindro de 35 lb</label>
+      <div class="inp"><span>Q</span><input type="number" id="p35" step="0.01" min="0" [(ngModel)]="p35Price"></div>
+    </div>
+    <div class="fr">
+      <label for="p100">Cilindro de 100 lb</label>
+      <div class="inp"><span>Q</span><input type="number" id="p100" step="0.01" min="0" [(ngModel)]="p100Price"></div>
+    </div>
+
+    <div class="mf">
+      <button class="btn s" (click)="closePriceModal()">Cancelar</button>
+      <button class="btn p" (click)="savePrices()">Guardar precios</button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Modal de Confirmación de Venta -->
+@if (showOkModal()) {
+<div class="ov on">
+  <div class="md ok">
+    <div class="ck"><i class="fa-solid fa-check"></i></div>
+    <h3>VENTA REGISTRADA</h3>
+    <div class="sm">
+      <div><small>Cliente</small><b>{{ completedSale().client }}</b></div>
+      <div><small>Modalidad</small><b>{{ completedSale().mode }}</b></div>
+      <div class="t"><small>Total</small><b>Q {{ completedSale().total | number:'1.2-2' }}</b></div>
+    </div>
+    <button class="btn p big" (click)="finishSale()">Finalizar</button>
+  </div>
+</div>
+}
+
+<!-- Toast de Notificaciones -->
+@if (toastMessage()) {
+<div class="toast on">
+  <i class="fa-solid fa-circle-check"></i>
+  <span>{{ toastMessage() }}</span>
+</div>
+}
