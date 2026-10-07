@@ -4,39 +4,177 @@
   "target": "postgres",
   "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
   "roots": {
-    "Post": {
-      "model": "Post",
+    "Abono": {
+      "model": "Abono",
       "namespace": "public"
     },
-    "User": {
-      "model": "User",
+    "Cliente": {
+      "model": "Cliente",
+      "namespace": "public"
+    },
+    "CuentaCobrar": {
+      "model": "CuentaCobrar",
+      "namespace": "public"
+    },
+    "DetalleVenta": {
+      "model": "DetalleVenta",
+      "namespace": "public"
+    },
+    "Inventario": {
+      "model": "Inventario",
+      "namespace": "public"
+    },
+    "MovimientoInventario": {
+      "model": "MovimientoInventario",
+      "namespace": "public"
+    },
+    "Producto": {
+      "model": "Producto",
+      "namespace": "public"
+    },
+    "Usuario": {
+      "model": "Usuario",
+      "namespace": "public"
+    },
+    "Venta": {
+      "model": "Venta",
       "namespace": "public"
     }
   },
   "domain": {
     "namespaces": {
       "public": {
+        "enum": {
+          "EstadoCliente": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "ACTIVO",
+                "value": "ACTIVO"
+              },
+              {
+                "name": "INACTIVO",
+                "value": "INACTIVO"
+              }
+            ]
+          },
+          "EstadoCuentaCobrar": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "PENDIENTE",
+                "value": "PENDIENTE"
+              },
+              {
+                "name": "PARCIAL",
+                "value": "PARCIAL"
+              },
+              {
+                "name": "PAGADA",
+                "value": "PAGADA"
+              },
+              {
+                "name": "VENCIDA",
+                "value": "VENCIDA"
+              }
+            ]
+          },
+          "EstadoVenta": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "COMPLETADA",
+                "value": "COMPLETADA"
+              },
+              {
+                "name": "ANULADA",
+                "value": "ANULADA"
+              }
+            ]
+          },
+          "RolUsuario": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "ADMINISTRADOR",
+                "value": "ADMINISTRADOR"
+              },
+              {
+                "name": "VENDEDOR",
+                "value": "VENDEDOR"
+              },
+              {
+                "name": "BODEGUERO",
+                "value": "BODEGUERO"
+              }
+            ]
+          },
+          "TipoEstadoCilindro": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "LLENO",
+                "value": "LLENO"
+              },
+              {
+                "name": "VACIO",
+                "value": "VACIO"
+              }
+            ]
+          },
+          "TipoMovimientoInventario": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "ENTRADA",
+                "value": "ENTRADA"
+              },
+              {
+                "name": "SALIDA",
+                "value": "SALIDA"
+              },
+              {
+                "name": "AJUSTE",
+                "value": "AJUSTE"
+              },
+              {
+                "name": "VENTA",
+                "value": "VENTA"
+              },
+              {
+                "name": "DEVOLUCION",
+                "value": "DEVOLUCION"
+              }
+            ]
+          },
+          "TipoVenta": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "CONTADO",
+                "value": "CONTADO"
+              },
+              {
+                "name": "CREDITO",
+                "value": "CREDITO"
+              }
+            ]
+          }
+        },
         "models": {
-          "Post": {
+          "Abono": {
             "fields": {
-              "authorId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "content": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "createdAt": {
+              "creadoEn": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "cuentaCobrarId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
@@ -47,78 +185,121 @@
                   "kind": "scalar"
                 }
               },
-              "title": {
+              "monto": {
                 "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "observacion": {
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "updatedAt": {
+              "usuarioId": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-string@1",
+                  "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               }
             },
             "relations": {
-              "author": {
+              "cuentaCobrar": {
                 "cardinality": "N:1",
                 "nullable": false,
                 "on": {
                   "localFields": [
-                    "authorId"
+                    "cuentaCobrarId"
                   ],
                   "targetFields": [
                     "id"
                   ]
                 },
                 "to": {
-                  "model": "User",
+                  "model": "CuentaCobrar",
+                  "namespace": "public"
+                }
+              },
+              "usuario": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "usuarioId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Usuario",
                   "namespace": "public"
                 }
               }
             },
             "storage": {
               "fields": {
-                "authorId": {
-                  "column": "authorId"
+                "creadoEn": {
+                  "column": "creadoEn"
                 },
-                "content": {
-                  "column": "content"
-                },
-                "createdAt": {
-                  "column": "createdAt"
+                "cuentaCobrarId": {
+                  "column": "cuentaCobrarId"
                 },
                 "id": {
                   "column": "id"
                 },
-                "title": {
-                  "column": "title"
+                "monto": {
+                  "column": "monto"
                 },
-                "updatedAt": {
-                  "column": "updatedAt"
+                "observacion": {
+                  "column": "observacion"
+                },
+                "usuarioId": {
+                  "column": "usuarioId"
                 }
               },
               "namespaceId": "public",
-              "table": "Post"
+              "table": "Abono"
             }
           },
-          "User": {
+          "Cliente": {
             "fields": {
-              "createdAt": {
+              "actualizadoEn": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
-              "email": {
+              "creadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "direccion": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "estado": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "EstadoCliente",
+                  "namespaceId": "public",
+                  "plane": "domain"
                 }
               },
               "id": {
@@ -128,21 +309,28 @@
                   "kind": "scalar"
                 }
               },
-              "name": {
+              "limiteCredito": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "nit": {
                 "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "updatedAt": {
+              "nombre": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-string@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "username": {
+              "telefono": {
                 "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
@@ -151,45 +339,974 @@
               }
             },
             "relations": {
-              "posts": {
+              "ventas": {
                 "cardinality": "1:N",
                 "on": {
                   "localFields": [
                     "id"
                   ],
                   "targetFields": [
-                    "authorId"
+                    "clienteId"
                   ]
                 },
                 "to": {
-                  "model": "Post",
+                  "model": "Venta",
                   "namespace": "public"
                 }
               }
             },
             "storage": {
               "fields": {
-                "createdAt": {
-                  "column": "createdAt"
+                "actualizadoEn": {
+                  "column": "actualizadoEn"
                 },
-                "email": {
-                  "column": "email"
+                "creadoEn": {
+                  "column": "creadoEn"
+                },
+                "direccion": {
+                  "column": "direccion"
+                },
+                "estado": {
+                  "column": "estado"
                 },
                 "id": {
                   "column": "id"
                 },
-                "name": {
-                  "column": "name"
+                "limiteCredito": {
+                  "column": "limiteCredito"
                 },
-                "updatedAt": {
-                  "column": "updatedAt"
+                "nit": {
+                  "column": "nit"
+                },
+                "nombre": {
+                  "column": "nombre"
+                },
+                "telefono": {
+                  "column": "telefono"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Cliente"
+            }
+          },
+          "CuentaCobrar": {
+            "fields": {
+              "actualizadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "creadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "estado": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "EstadoCuentaCobrar",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "fechaVencimiento": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "montoOriginal": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "saldoPendiente": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "ventaId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "abonos": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "cuentaCobrarId"
+                  ]
+                },
+                "to": {
+                  "model": "Abono",
+                  "namespace": "public"
+                }
+              },
+              "venta": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "ventaId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Venta",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "actualizadoEn": {
+                  "column": "actualizadoEn"
+                },
+                "creadoEn": {
+                  "column": "creadoEn"
+                },
+                "estado": {
+                  "column": "estado"
+                },
+                "fechaVencimiento": {
+                  "column": "fechaVencimiento"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "montoOriginal": {
+                  "column": "montoOriginal"
+                },
+                "saldoPendiente": {
+                  "column": "saldoPendiente"
+                },
+                "ventaId": {
+                  "column": "ventaId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "CuentaCobrar"
+            }
+          },
+          "DetalleVenta": {
+            "fields": {
+              "cantidad": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "precioUnitario": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "productoId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "subtotal": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "vaciosRecibidos": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "ventaId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "producto": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "productoId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Producto",
+                  "namespace": "public"
+                }
+              },
+              "venta": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "ventaId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Venta",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "cantidad": {
+                  "column": "cantidad"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "precioUnitario": {
+                  "column": "precioUnitario"
+                },
+                "productoId": {
+                  "column": "productoId"
+                },
+                "subtotal": {
+                  "column": "subtotal"
+                },
+                "vaciosRecibidos": {
+                  "column": "vaciosRecibidos"
+                },
+                "ventaId": {
+                  "column": "ventaId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "DetalleVenta"
+            }
+          },
+          "Inventario": {
+            "fields": {
+              "actualizadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "cantidad": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "creadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "estado": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "TipoEstadoCilindro",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "productoId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "producto": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "productoId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Producto",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "actualizadoEn": {
+                  "column": "actualizadoEn"
+                },
+                "cantidad": {
+                  "column": "cantidad"
+                },
+                "creadoEn": {
+                  "column": "creadoEn"
+                },
+                "estado": {
+                  "column": "estado"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "productoId": {
+                  "column": "productoId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Inventario"
+            }
+          },
+          "MovimientoInventario": {
+            "fields": {
+              "cantidad": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "creadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "estado": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "TipoEstadoCilindro",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "motivo": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "productoId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "referencia": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "tipo": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "TipoMovimientoInventario",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "usuarioId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "producto": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "productoId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Producto",
+                  "namespace": "public"
+                }
+              },
+              "usuario": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "usuarioId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Usuario",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "cantidad": {
+                  "column": "cantidad"
+                },
+                "creadoEn": {
+                  "column": "creadoEn"
+                },
+                "estado": {
+                  "column": "estado"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "motivo": {
+                  "column": "motivo"
+                },
+                "productoId": {
+                  "column": "productoId"
+                },
+                "referencia": {
+                  "column": "referencia"
+                },
+                "tipo": {
+                  "column": "tipo"
+                },
+                "usuarioId": {
+                  "column": "usuarioId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "MovimientoInventario"
+            }
+          },
+          "Producto": {
+            "fields": {
+              "activo": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "actualizadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "creadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "nombre": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "pesoLb": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "precio": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "detallesVenta": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "productoId"
+                  ]
+                },
+                "to": {
+                  "model": "DetalleVenta",
+                  "namespace": "public"
+                }
+              },
+              "inventarios": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "productoId"
+                  ]
+                },
+                "to": {
+                  "model": "Inventario",
+                  "namespace": "public"
+                }
+              },
+              "movimientos": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "productoId"
+                  ]
+                },
+                "to": {
+                  "model": "MovimientoInventario",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "activo": {
+                  "column": "activo"
+                },
+                "actualizadoEn": {
+                  "column": "actualizadoEn"
+                },
+                "creadoEn": {
+                  "column": "creadoEn"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "nombre": {
+                  "column": "nombre"
+                },
+                "pesoLb": {
+                  "column": "pesoLb"
+                },
+                "precio": {
+                  "column": "precio"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Producto"
+            }
+          },
+          "Usuario": {
+            "fields": {
+              "activo": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "actualizadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "creadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "nombreCompleto": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "passwordHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "rol": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "RolUsuario",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "username": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "abonosRegistrados": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "usuarioId"
+                  ]
+                },
+                "to": {
+                  "model": "Abono",
+                  "namespace": "public"
+                }
+              },
+              "movimientosInventario": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "usuarioId"
+                  ]
+                },
+                "to": {
+                  "model": "MovimientoInventario",
+                  "namespace": "public"
+                }
+              },
+              "ventas": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "usuarioId"
+                  ]
+                },
+                "to": {
+                  "model": "Venta",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "activo": {
+                  "column": "activo"
+                },
+                "actualizadoEn": {
+                  "column": "actualizadoEn"
+                },
+                "creadoEn": {
+                  "column": "creadoEn"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "nombreCompleto": {
+                  "column": "nombreCompleto"
+                },
+                "passwordHash": {
+                  "column": "passwordHash"
+                },
+                "rol": {
+                  "column": "rol"
                 },
                 "username": {
                   "column": "username"
                 }
               },
               "namespaceId": "public",
-              "table": "User"
+              "table": "Usuario"
+            }
+          },
+          "Venta": {
+            "fields": {
+              "actualizadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "clienteId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "creadoEn": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "estado": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "EstadoVenta",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "tipo": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "TipoVenta",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "total": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "usuarioId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "cliente": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "clienteId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Cliente",
+                  "namespace": "public"
+                }
+              },
+              "cuentaCobrar": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "ventaId"
+                  ]
+                },
+                "to": {
+                  "model": "CuentaCobrar",
+                  "namespace": "public"
+                }
+              },
+              "detalles": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "ventaId"
+                  ]
+                },
+                "to": {
+                  "model": "DetalleVenta",
+                  "namespace": "public"
+                }
+              },
+              "usuario": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "usuarioId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Usuario",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "actualizadoEn": {
+                  "column": "actualizadoEn"
+                },
+                "clienteId": {
+                  "column": "clienteId"
+                },
+                "creadoEn": {
+                  "column": "creadoEn"
+                },
+                "estado": {
+                  "column": "estado"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "tipo": {
+                  "column": "tipo"
+                },
+                "total": {
+                  "column": "total"
+                },
+                "usuarioId": {
+                  "column": "usuarioId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Venta"
             }
           }
         }
@@ -201,25 +1318,20 @@
       "public": {
         "entries": {
           "table": {
-            "Post": {
+            "Abono": {
               "columns": {
-                "authorId": {
-                  "codecId": "pg/int4@1",
-                  "nativeType": "int4",
-                  "nullable": false
-                },
-                "content": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": true
-                },
-                "createdAt": {
+                "creadoEn": {
                   "codecId": "pg/timestamptz-string@1",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
                   },
                   "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "cuentaCobrarId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
                   "nullable": false
                 },
                 "id": {
@@ -231,14 +1343,19 @@
                   "nativeType": "int4",
                   "nullable": false
                 },
-                "title": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
+                "monto": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
                   "nullable": false
                 },
-                "updatedAt": {
-                  "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                "observacion": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "usuarioId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
                   "nullable": false
                 }
               },
@@ -246,27 +1363,51 @@
                 {
                   "source": {
                     "columns": [
-                      "authorId"
+                      "cuentaCobrarId"
                     ],
                     "namespaceId": "public",
-                    "tableName": "Post"
+                    "tableName": "Abono"
                   },
                   "target": {
                     "columns": [
                       "id"
                     ],
                     "namespaceId": "public",
-                    "tableName": "User"
+                    "tableName": "CuentaCobrar"
+                  }
+                },
+                {
+                  "source": {
+                    "columns": [
+                      "usuarioId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Abono"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Usuario"
                   }
                 }
               ],
               "indexes": [
                 {
                   "columns": [
-                    "authorId"
+                    "cuentaCobrarId"
                   ],
-                  "name": "Post_authorId_idx_e47547ed",
-                  "prefix": "Post_authorId_idx",
+                  "name": "Abono_cuentaCobrarId_idx_9f49cd56",
+                  "prefix": "Abono_cuentaCobrarId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "usuarioId"
+                  ],
+                  "name": "Abono_usuarioId_idx_5f01c7d6",
+                  "prefix": "Abono_usuarioId_idx",
                   "unique": false
                 }
               ],
@@ -277,9 +1418,21 @@
               },
               "uniques": []
             },
-            "User": {
+            "Cliente": {
+              "checks": [
+                {
+                  "expression": "\"estado\" IN ('ACTIVO', 'INACTIVO')",
+                  "name": "Cliente_estado_check_a4def358",
+                  "prefix": "Cliente_estado_check"
+                }
+              ],
               "columns": {
-                "createdAt": {
+                "actualizadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "creadoEn": {
                   "codecId": "pg/timestamptz-string@1",
                   "default": {
                     "expression": "now()",
@@ -288,10 +1441,25 @@
                   "nativeType": "timestamptz",
                   "nullable": false
                 },
-                "email": {
+                "direccion": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
-                  "nullable": false
+                  "nullable": true
+                },
+                "estado": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "ACTIVO"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "EstadoCliente",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 },
                 "id": {
                   "codecId": "pg/int4@1",
@@ -302,17 +1470,26 @@
                   "nativeType": "int4",
                   "nullable": false
                 },
-                "name": {
+                "limiteCredito": {
+                  "codecId": "pg/numeric@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "0"
+                  },
+                  "nativeType": "numeric",
+                  "nullable": false
+                },
+                "nit": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": true
                 },
-                "updatedAt": {
-                  "codecId": "pg/timestamptz-string@1",
-                  "nativeType": "timestamptz",
+                "nombre": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
                   "nullable": false
                 },
-                "username": {
+                "telefono": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": true
@@ -325,12 +1502,793 @@
                   "id"
                 ]
               },
+              "uniques": []
+            },
+            "CuentaCobrar": {
+              "checks": [
+                {
+                  "expression": "\"estado\" IN ('PENDIENTE', 'PARCIAL', 'PAGADA', 'VENCIDA')",
+                  "name": "CuentaCobrar_estado_check_a4dfc08e",
+                  "prefix": "CuentaCobrar_estado_check"
+                }
+              ],
+              "columns": {
+                "actualizadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "creadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "estado": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDIENTE"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "EstadoCuentaCobrar",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "fechaVencimiento": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "montoOriginal": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": false
+                },
+                "saldoPendiente": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": false
+                },
+                "ventaId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "ventaId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "CuentaCobrar"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Venta"
+                  }
+                }
+              ],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
               "uniques": [
                 {
                   "columns": [
-                    "email"
+                    "ventaId"
                   ]
                 }
+              ]
+            },
+            "DetalleVenta": {
+              "columns": {
+                "cantidad": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "precioUnitario": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": false
+                },
+                "productoId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "subtotal": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": false
+                },
+                "vaciosRecibidos": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "ventaId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "ventaId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "DetalleVenta"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Venta"
+                  }
+                },
+                {
+                  "source": {
+                    "columns": [
+                      "productoId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "DetalleVenta"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Producto"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "productoId"
+                  ],
+                  "name": "DetalleVenta_productoId_idx_cc0c10f0",
+                  "prefix": "DetalleVenta_productoId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "ventaId"
+                  ],
+                  "name": "DetalleVenta_ventaId_idx_4eec5214",
+                  "prefix": "DetalleVenta_ventaId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "Inventario": {
+              "checks": [
+                {
+                  "expression": "\"estado\" IN ('LLENO', 'VACIO')",
+                  "name": "Inventario_estado_check_b5136192",
+                  "prefix": "Inventario_estado_check"
+                }
+              ],
+              "columns": {
+                "actualizadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "cantidad": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "creadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "estado": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "TipoEstadoCilindro",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "productoId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "productoId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Inventario"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Producto"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "productoId"
+                  ],
+                  "name": "Inventario_productoId_idx_cc0c10f0",
+                  "prefix": "Inventario_productoId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "productoId",
+                    "estado"
+                  ]
+                }
+              ]
+            },
+            "MovimientoInventario": {
+              "checks": [
+                {
+                  "expression": "\"estado\" IN ('LLENO', 'VACIO')",
+                  "name": "MovimientoInventario_estado_check_b5136192",
+                  "prefix": "MovimientoInventario_estado_check"
+                },
+                {
+                  "expression": "\"tipo\" IN ('ENTRADA', 'SALIDA', 'AJUSTE', 'VENTA', 'DEVOLUCION')",
+                  "name": "MovimientoInventario_tipo_check_9525ac5b",
+                  "prefix": "MovimientoInventario_tipo_check"
+                }
+              ],
+              "columns": {
+                "cantidad": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "creadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "estado": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "TipoEstadoCilindro",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "motivo": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "productoId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "referencia": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "tipo": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "TipoMovimientoInventario",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "usuarioId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "productoId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MovimientoInventario"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Producto"
+                  }
+                },
+                {
+                  "source": {
+                    "columns": [
+                      "usuarioId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MovimientoInventario"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Usuario"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "productoId"
+                  ],
+                  "name": "MovimientoInventario_productoId_idx_cc0c10f0",
+                  "prefix": "MovimientoInventario_productoId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "usuarioId"
+                  ],
+                  "name": "MovimientoInventario_usuarioId_idx_5f01c7d6",
+                  "prefix": "MovimientoInventario_usuarioId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "Producto": {
+              "columns": {
+                "activo": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "actualizadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "creadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "nombre": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "pesoLb": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "precio": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "pesoLb"
+                  ]
+                }
+              ]
+            },
+            "Usuario": {
+              "checks": [
+                {
+                  "expression": "\"rol\" IN ('ADMINISTRADOR', 'VENDEDOR', 'BODEGUERO')",
+                  "name": "Usuario_rol_check_0f6651eb",
+                  "prefix": "Usuario_rol_check"
+                }
+              ],
+              "columns": {
+                "activo": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "actualizadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "creadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "nombreCompleto": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "passwordHash": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "rol": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "RolUsuario",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "username": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "username"
+                  ]
+                }
+              ]
+            },
+            "Venta": {
+              "checks": [
+                {
+                  "expression": "\"estado\" IN ('COMPLETADA', 'ANULADA')",
+                  "name": "Venta_estado_check_923ff1c2",
+                  "prefix": "Venta_estado_check"
+                },
+                {
+                  "expression": "\"tipo\" IN ('CONTADO', 'CREDITO')",
+                  "name": "Venta_tipo_check_bd42614d",
+                  "prefix": "Venta_tipo_check"
+                }
+              ],
+              "columns": {
+                "actualizadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "clienteId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "creadoEn": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "estado": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "COMPLETADA"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "EstadoVenta",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "tipo": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "TipoVenta",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "total": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": false
+                },
+                "usuarioId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "clienteId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Venta"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Cliente"
+                  }
+                },
+                {
+                  "source": {
+                    "columns": [
+                      "usuarioId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Venta"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Usuario"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "clienteId"
+                  ],
+                  "name": "Venta_clienteId_idx_7ae16308",
+                  "prefix": "Venta_clienteId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "usuarioId"
+                  ],
+                  "name": "Venta_usuarioId_idx_5f01c7d6",
+                  "prefix": "Venta_usuarioId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            }
+          },
+          "valueSet": {
+            "EstadoCliente": {
+              "kind": "valueSet",
+              "values": [
+                "ACTIVO",
+                "INACTIVO"
+              ]
+            },
+            "EstadoCuentaCobrar": {
+              "kind": "valueSet",
+              "values": [
+                "PENDIENTE",
+                "PARCIAL",
+                "PAGADA",
+                "VENCIDA"
+              ]
+            },
+            "EstadoVenta": {
+              "kind": "valueSet",
+              "values": [
+                "COMPLETADA",
+                "ANULADA"
+              ]
+            },
+            "RolUsuario": {
+              "kind": "valueSet",
+              "values": [
+                "ADMINISTRADOR",
+                "VENDEDOR",
+                "BODEGUERO"
+              ]
+            },
+            "TipoEstadoCilindro": {
+              "kind": "valueSet",
+              "values": [
+                "LLENO",
+                "VACIO"
+              ]
+            },
+            "TipoMovimientoInventario": {
+              "kind": "valueSet",
+              "values": [
+                "ENTRADA",
+                "SALIDA",
+                "AJUSTE",
+                "VENTA",
+                "DEVOLUCION"
+              ]
+            },
+            "TipoVenta": {
+              "kind": "valueSet",
+              "values": [
+                "CONTADO",
+                "CREDITO"
               ]
             }
           }
@@ -339,10 +2297,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "91e7f9f035806fa2789a4d726ef7724cad434fd6b00014d47ebf12d6e6bb784e"
+    "storageHash": "4a480d8425df3a88f9d8d843c88f1bb552d0cc41f0571652a02965d15f02c14a"
   },
   "execution": {
-    "executionHash": "4e88564095b5e0ba7904ffdba3c563ef916d87688c8c483c67055f71a9194f0f",
+    "executionHash": "056e78955a223225148452110441dc86f5b392925d5644e4826cb782a9583d21",
     "mutations": {
       "defaults": [
         {
@@ -355,8 +2313,8 @@
             "kind": "generator"
           },
           "ref": {
-            "entry": "Post",
-            "field": "updatedAt",
+            "entry": "Cliente",
+            "field": "actualizadoEn",
             "namespace": "public"
           }
         },
@@ -370,8 +2328,68 @@
             "kind": "generator"
           },
           "ref": {
-            "entry": "User",
-            "field": "updatedAt",
+            "entry": "CuentaCobrar",
+            "field": "actualizadoEn",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Inventario",
+            "field": "actualizadoEn",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Producto",
+            "field": "actualizadoEn",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Usuario",
+            "field": "actualizadoEn",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Venta",
+            "field": "actualizadoEn",
             "namespace": "public"
           }
         }

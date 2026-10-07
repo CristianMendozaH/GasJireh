@@ -1,21 +1,282 @@
 // use prisma-8
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+// ======================================================
+// ENUMS
+// ======================================================
+
+enum RolUsuario {
+  ADMINISTRADOR
+  VENDEDOR
+  BODEGUERO
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum EstadoCliente {
+  ACTIVO
+  INACTIVO
+}
+
+enum TipoEstadoCilindro {
+  LLENO
+  VACIO
+}
+
+enum TipoMovimientoInventario {
+  ENTRADA
+  SALIDA
+  AJUSTE
+  VENTA
+  DEVOLUCION
+}
+
+enum TipoVenta {
+  CONTADO
+  CREDITO
+}
+
+enum EstadoVenta {
+  COMPLETADA
+  ANULADA
+}
+
+enum EstadoCuentaCobrar {
+  PENDIENTE
+  PARCIAL
+  PAGADA
+  VENCIDA
+}
+
+
+// ======================================================
+// USUARIOS
+// ======================================================
+
+model Usuario {
+  id                    Int                       @id @default(autoincrement())
+  nombreCompleto        String
+  username              String                    @unique
+  passwordHash          String
+  rol                   RolUsuario
+  activo                Boolean                   @default(true)
+
+  ventas                Venta[]
+  movimientosInventario MovimientoInventario[]
+  abonosRegistrados     Abono[]
+
+  creadoEn              TimestamptzString         @default(now())
+  actualizadoEn         temporal.updatedAtString()
+}
+
+
+// ======================================================
+// CLIENTES
+// ======================================================
+
+model Cliente {
+  id             Int               @id @default(autoincrement())
+  nombre         String
+  telefono       String?
+  direccion      String?
+  nit            String?
+  limiteCredito  Decimal           @default(0)
+  estado         EstadoCliente     @default(ACTIVO)
+
+  ventas         Venta[]
+
+  creadoEn       TimestamptzString @default(now())
+  actualizadoEn  temporal.updatedAtString()
+}
+
+
+// ======================================================
+// PRODUCTOS
+// ======================================================
+
+model Producto {
+  id             Int                       @id @default(autoincrement())
+  nombre         String
+  pesoLb         Int                       @unique
+  precio         Decimal
+  activo         Boolean                   @default(true)
+
+  inventarios    Inventario[]
+  movimientos    MovimientoInventario[]
+  detallesVenta  DetalleVenta[]
+
+  creadoEn       TimestamptzString         @default(now())
+  actualizadoEn  temporal.updatedAtString()
+}
+
+
+// ======================================================
+// INVENTARIO ACTUAL
+// ======================================================
+
+model Inventario {
+  id             Int                @id @default(autoincrement())
+  productoId     Int
+  estado         TipoEstadoCilindro
+  cantidad       Int                @default(0)
+
+  producto       Producto           @relation(
+    fields: [productoId],
+    references: [id]
+  )
+
+  creadoEn       TimestamptzString  @default(now())
+  actualizadoEn  temporal.updatedAtString()
+
+  @@unique([productoId, estado])
+}
+
+
+// ======================================================
+// MOVIMIENTOS DE INVENTARIO
+// ======================================================
+
+model MovimientoInventario {
+  id             Int                       @id @default(autoincrement())
+
+  productoId     Int
+  usuarioId      Int
+
+  tipo           TipoMovimientoInventario
+  estado         TipoEstadoCilindro
+
+  cantidad       Int
+  motivo         String?
+  referencia     String?
+
+  producto       Producto                  @relation(
+    fields: [productoId],
+    references: [id]
+  )
+
+  usuario        Usuario                   @relation(
+    fields: [usuarioId],
+    references: [id]
+  )
+
+  creadoEn       TimestamptzString         @default(now())
+}
+
+
+// ======================================================
+// VENTAS
+// ======================================================
+
+model Venta {
+  id             Int               @id @default(autoincrement())
+
+  clienteId      Int?
+  usuarioId      Int
+
+  tipo           TipoVenta
+  estado         EstadoVenta       @default(COMPLETADA)
+
+  total          Decimal
+
+  cliente        Cliente?          @relation(
+    fields: [clienteId],
+    references: [id]
+  )
+
+  usuario        Usuario           @relation(
+    fields: [usuarioId],
+    references: [id]
+  )
+
+  detalles       DetalleVenta[]
+  cuentaCobrar   CuentaCobrar?
+
+  creadoEn       TimestamptzString @default(now())
+  actualizadoEn  temporal.updatedAtString()
+}
+
+
+// ======================================================
+// DETALLE DE VENTAS
+// ======================================================
+
+model DetalleVenta {
+  id               Int       @id @default(autoincrement())
+
+  ventaId          Int
+  productoId       Int
+
+  cantidad         Int
+
+  // Precio utilizado al momento de realizar la venta.
+  // Se guarda aquí para conservar el histórico aunque
+  // posteriormente cambie el precio del producto.
+  precioUnitario   Decimal
+
+  subtotal         Decimal
+
+  // Cantidad de cilindros vacíos entregados por el cliente.
+  vaciosRecibidos  Int       @default(0)
+
+  venta            Venta     @relation(
+    fields: [ventaId],
+    references: [id]
+  )
+
+  producto         Producto  @relation(
+    fields: [productoId],
+    references: [id]
+  )
+}
+
+
+// ======================================================
+// CUENTAS POR COBRAR
+// ======================================================
+
+model CuentaCobrar {
+  id             Int                  @id @default(autoincrement())
+
+  ventaId        Int                  @unique
+
+  montoOriginal  Decimal
+  saldoPendiente Decimal
+
+  estado         EstadoCuentaCobrar   @default(PENDIENTE)
+
+  fechaVencimiento TimestamptzString?
+
+  venta          Venta                @relation(
+    fields: [ventaId],
+    references: [id]
+  )
+
+  abonos         Abono[]
+
+  creadoEn       TimestamptzString    @default(now())
+  actualizadoEn  temporal.updatedAtString()
+}
+
+
+// ======================================================
+// ABONOS
+// ======================================================
+
+model Abono {
+  id              Int               @id @default(autoincrement())
+
+  cuentaCobrarId  Int
+  usuarioId       Int
+
+  monto           Decimal
+  observacion     String?
+
+  cuentaCobrar    CuentaCobrar      @relation(
+    fields: [cuentaCobrarId],
+    references: [id]
+  )
+
+  usuario         Usuario           @relation(
+    fields: [usuarioId],
+    references: [id]
+  )
+
+  creadoEn        TimestamptzString @default(now())
 }
