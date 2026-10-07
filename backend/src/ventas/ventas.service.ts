@@ -354,19 +354,43 @@ export class VentasService {
           );
         }
 
+        // =========================================================
+        // OBTENER PRECIO REAL DEL PRODUCTO DESDE POSTGRESQL
+        // =========================================================
+
+        const precioUnitario =
+          Number(producto.precio);
+
+        if (
+          !Number.isFinite(precioUnitario) ||
+          precioUnitario < 0
+        ) {
+          throw new BadRequestException(
+            `El producto ${producto.nombre} tiene un precio inválido`,
+          );
+        }
+
+        // =========================================================
+        // CALCULAR SUBTOTAL
+        // =========================================================
+
         const subtotal =
           detalle.cantidad *
-          detalle.precioUnitario;
+          precioUnitario;
 
         total += subtotal;
+
+        // =========================================================
+        // PREPARAR DETALLE DE LA VENTA
+        // =========================================================
 
         return {
           producto,
           productoId:
             detalle.productoId,
-          cantidad: detalle.cantidad,
-          precioUnitario:
-            detalle.precioUnitario,
+          cantidad:
+            detalle.cantidad,
+          precioUnitario,
           subtotal,
           vaciosRecibidos,
         };

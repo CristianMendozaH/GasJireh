@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    ParseIntPipe,
+    Patch,
+    Post,
+} from '@nestjs/common';
+
 import { ProductosService } from './productos.service.js';
 import { CreateProductoDto } from './dto/create-producto.dto.js';
 
@@ -16,5 +25,13 @@ export class ProductosController {
     @Post()
     create(@Body() createProductoDto: CreateProductoDto) {
         return this.productosService.create(createProductoDto);
+    }
+
+    @Patch(':id/precio')
+    actualizarPrecio(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() body: { precio: number },
+    ) {
+        return this.productosService.actualizarPrecio(id, body.precio);
     }
 }

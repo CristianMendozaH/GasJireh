@@ -1,132 +1,336 @@
 <header class="top">
   <h1>GESTIÓN DE CLIENTES</h1>
+
   <div class="acts">
     <div class="sr">
       <i class="fa-solid fa-magnifying-glass"></i>
+
       <input type="search" placeholder="Buscar cliente..." autocomplete="off" aria-label="Buscar cliente"
         [(ngModel)]="searchQuery">
     </div>
+
     <button class="btn p" (click)="openModal(null)">
-      <i class="fa-solid fa-plus"></i>Nuevo Cliente
+      <i class="fa-solid fa-plus"></i>
+      Nuevo Cliente
     </button>
   </div>
 </header>
 
+<!-- ===================================================== -->
+<!-- CONTADOR -->
+<!-- ===================================================== -->
+
 <div class="cnt">
-  {{ filteredClients.length }} {{ filteredClients.length === 1 ? 'cliente' : 'clientes' }}
+  {{ filteredClients.length }}
+  {{ filteredClients.length === 1 ? 'cliente' : 'clientes' }}
 </div>
 
+<!-- ===================================================== -->
+<!-- CLIENTES -->
+<!-- ===================================================== -->
+
 <section class="grid2">
+
   <article *ngFor="let c of filteredClients" class="card cl" [class.new]="c === newestClient">
+
+    <!-- CABECERA -->
+
     <div class="hd">
+
       <div>
         <h3>{{ c.name }}</h3>
+
         <div class="tel">
-          <i class="fa-solid fa-phone" style="font-size:11px"></i>{{ c.tel }}
+          <i class="fa-solid fa-phone" style="font-size: 11px"></i>
+
+          {{ c.tel }}
         </div>
       </div>
+
       <div class="hr">
+
         <span class="tag" [ngClass]="cls[c.st]">
           {{ c.st }}
         </span>
+
         <button class="ed" (click)="openModal(clients.indexOf(c))" title="Ver / editar datos"
           [attr.aria-label]="'Ver o editar datos de ' + c.name">
           <i class="fa-solid fa-pen-to-square"></i>
         </button>
+
       </div>
     </div>
+
+    <!-- INFORMACIÓN FINANCIERA -->
 
     <div class="st">
+
       <div>
         <small>Deuda actual</small>
-        <b [class.rd]="c.debt > 0 && c.st === 'Vencido'">{{ money(c.debt) }}</b>
+
+        <b [class.rd]="c.debt > 0 && c.st === 'Vencido'">
+          {{ money(c.debt) }}
+        </b>
       </div>
+
       <div>
         <small>Límite crédito</small>
-        <b>{{ money(c.limit) }}</b>
+
+        <b>
+          {{ money(c.limit) }}
+        </b>
       </div>
+
     </div>
+
+    <!-- AUTORIZACIÓN -->
 
     <div class="ft">
-      <span>Crédito autorizado</span>
+
+      <span>
+        Crédito autorizado
+      </span>
+
       <span *ngIf="c.auth" class="au y">
-        <i class="fa-solid fa-check"></i>Autorizado
+        <i class="fa-solid fa-check"></i>
+        Autorizado
       </span>
+
       <span *ngIf="!c.auth" class="au n">
-        <i class="fa-solid fa-xmark"></i>No autorizado
+        <i class="fa-solid fa-xmark"></i>
+        No autorizado
       </span>
+
     </div>
+
   </article>
 
-  <div *ngIf="filteredClients.length === 0" class="none">
+  <!-- SIN RESULTADOS -->
+
+  <div *ngIf="
+      !cargandoClientes &&
+      filteredClients.length === 0
+    " class="none">
     <i class="fa-regular fa-folder-open"></i>
-    No se encontraron clientes para "{{ searchQuery }}"
+
+    <ng-container *ngIf="searchQuery; else sinClientes">
+      No se encontraron clientes para "{{ searchQuery }}"
+    </ng-container>
+
+    <ng-template #sinClientes>
+      No hay clientes registrados
+    </ng-template>
   </div>
+
 </section>
 
-<!-- Modal Registrar / Editar Cliente -->
+<!-- ===================================================== -->
+<!-- MODAL REGISTRAR / EDITAR CLIENTE -->
+<!-- ===================================================== -->
+
 <div class="ov" [class.on]="modalVisible" (click)="cerrarModalPorBackdrop($event)">
+
   <div class="md" role="dialog" aria-labelledby="mT">
-    <h3 id="mT">{{ editingIndex === null ? 'REGISTRAR CLIENTE' : 'EDITAR CLIENTE' }}</h3>
+
+    <!-- TÍTULO -->
+
+    <h3 id="mT">
+      {{
+      editingIndex === null
+      ? 'REGISTRAR CLIENTE'
+      : 'EDITAR CLIENTE'
+      }}
+    </h3>
+
     <p class="sub">
-      {{ editingIndex === null ? 'Agrega sus datos y configura el crédito inicial.' : 'Actualiza sus datos y la
-      configuración de crédito.' }}
+      {{
+      editingIndex === null
+      ? 'Agrega sus datos y configura el crédito inicial.'
+      : 'Actualiza sus datos y la configuración de crédito.'
+      }}
     </p>
 
+    <!-- ================================================= -->
+    <!-- NOMBRE -->
+    <!-- ================================================= -->
+
     <div class="fld" [class.bad]="errName">
-      <label class="up" for="cN">NOMBRE O NEGOCIO</label>
+
+      <label class="up" for="cN">
+        NOMBRE O NEGOCIO
+      </label>
+
       <input type="text" id="cN" placeholder="Ej. Restaurante San José" autocomplete="off" [(ngModel)]="formName"
-        (input)="errName = ''" (keydown.enter)="saveClient()">
-      <div class="err">{{ errName }}</div>
+        (input)="errName = ''">
+
+      <div class="err">
+        {{ errName }}
+      </div>
+
     </div>
+
+    <!-- ================================================= -->
+    <!-- TELÉFONO -->
+    <!-- ================================================= -->
 
     <div class="fld" [class.bad]="errTel">
-      <label class="up" for="cT">TELÉFONO</label>
+
+      <label class="up" for="cT">
+        TELÉFONO
+      </label>
+
       <input type="tel" id="cT" placeholder="0000-0000" inputmode="numeric" autocomplete="off" [ngModel]="formTel"
-        (ngModelChange)="onTelInput($event)" (keydown.enter)="saveClient()">
-      <div class="err">{{ errTel }}</div>
+        (ngModelChange)="onTelInput($event)">
+
+      <div class="err">
+        {{ errTel }}
+      </div>
+
     </div>
+
+    <!-- ================================================= -->
+    <!-- NIT -->
+    <!-- ================================================= -->
+
+    <div class="fld">
+
+      <label class="up" for="cNit">
+        NIT
+      </label>
+
+      <input type="text" id="cNit" placeholder="Ej. 1234567-8 o CF" autocomplete="off" [(ngModel)]="formNit">
+
+    </div>
+
+    <!-- ================================================= -->
+    <!-- DIRECCIÓN -->
+    <!-- ================================================= -->
+
+    <div class="fld">
+
+      <label class="up" for="cDir">
+        DIRECCIÓN
+      </label>
+
+      <input type="text" id="cDir" placeholder="Ej. Santa Cruz La Laguna" autocomplete="off"
+        [(ngModel)]="formDireccion">
+
+    </div>
+
+    <!-- ================================================= -->
+    <!-- LÍMITE DE CRÉDITO -->
+    <!-- ================================================= -->
 
     <div class="fld" [class.bad]="errLimit">
-      <label class="up" for="cL">LÍMITE DE CRÉDITO (Q)</label>
+
+      <label class="up" for="cL">
+        LÍMITE DE CRÉDITO (Q)
+      </label>
+
       <div class="inp">
+
         <span>Q</span>
+
         <input type="number" id="cL" min="0" step="0.01" placeholder="0.00" [disabled]="!formAuth"
-          [(ngModel)]="formLimit" (input)="errLimit = ''" (keydown.enter)="saveClient()">
+          [(ngModel)]="formLimit" (input)="errLimit = ''">
+
       </div>
-      <div class="err">{{ errLimit }}</div>
+
+      <div class="err">
+        {{ errLimit }}
+      </div>
+
     </div>
+
+    <!-- ================================================= -->
+    <!-- DEUDA ACTUAL -->
+    <!-- SOLO EN EDICIÓN -->
+    <!-- ================================================= -->
 
     <div class="fld" *ngIf="editingIndex !== null">
-      <label class="up" for="cD">DEUDA ACTUAL</label>
+
+      <label class="up" for="cD">
+        DEUDA ACTUAL
+      </label>
+
       <input type="text" id="cD" [value]="money(formDebt)" readonly>
+
     </div>
+
+    <!-- ================================================= -->
+    <!-- AUTORIZACIÓN DE CRÉDITO -->
+    <!-- ================================================= -->
 
     <div class="sw">
+
       <div>
-        <b>Autorizar compras a crédito</b>
-        <small>{{ formAuth ? 'Puede comprar al crédito hasta el límite definido' : 'Solo ventas al contado · límite
-          Q0.00' }}</small>
+
+        <b>
+          Autorizar compras a crédito
+        </b>
+
+        <small>
+          {{
+          formAuth
+          ? 'Puede comprar al crédito hasta el límite definido'
+          : 'Solo ventas al contado · límite Q0.00'
+          }}
+        </small>
+
       </div>
+
       <label class="tg">
+
         <input type="checkbox" [(ngModel)]="formAuth" (change)="onAuthChange()"
           aria-label="Autorizar compras a crédito">
+
         <i></i>
+
       </label>
+
     </div>
 
+    <!-- ================================================= -->
+    <!-- BOTONES -->
+    <!-- ================================================= -->
+
     <div class="mf">
-      <button class="btn s" (click)="closeModal()">Cancelar</button>
-      <button class="btn p" (click)="saveClient()">
-        <i class="fa-solid fa-check"></i>
-        {{ editingIndex === null ? 'Guardar cliente' : 'Guardar cambios' }}
+
+      <button class="btn s" (click)="closeModal()" [disabled]="guardandoCliente">
+        Cancelar
       </button>
+
+      <button class="btn p" (click)="saveClient()" [disabled]="guardandoCliente">
+
+        <i *ngIf="!guardandoCliente" class="fa-solid fa-check"></i>
+
+        <i *ngIf="guardandoCliente" class="fa-solid fa-spinner fa-spin"></i>
+
+        {{
+        guardandoCliente
+        ? 'Guardando...'
+        : editingIndex === null
+        ? 'Guardar cliente'
+        : 'Guardar cambios'
+        }}
+
+      </button>
+
     </div>
+
   </div>
 </div>
 
-<!-- Toast -->
+<!-- ===================================================== -->
+<!-- TOAST -->
+<!-- ===================================================== -->
+
 <div class="toast" [class.on]="toastVisible">
+
   <i class="fa-solid fa-circle-check"></i>
-  <span>{{ toastMsg }}</span>
+
+  <span>
+    {{ toastMsg }}
+  </span>
+
 </div>

@@ -236,8 +236,9 @@ h1 {
 }
 
 .tabs button.on.cr {
-  background: var(--am);
-  color: #fff;
+  background: #fff;
+  color: var(--or);
+  box-shadow: var(--sh);
 }
 
 /* Búsqueda y Selección de Crédito */
@@ -478,6 +479,88 @@ h1 {
 }
 
 /* Pie y Totales */
+/* =========================================================
+   CILINDROS VACÍOS RECIBIDOS
+   ========================================================= */
+
+.cart-item {
+  border-bottom: 1px solid var(--bd);
+  padding: 4px 0;
+}
+
+.cart-item:last-child {
+  border-bottom: 0;
+}
+
+.cart-item .it {
+  border-bottom: 0;
+  padding-bottom: 10px;
+}
+
+.empty-return {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin: 0 0 10px;
+  padding: 10px 12px;
+
+  background: var(--bg);
+  border-radius: 9px;
+}
+
+.empty-info {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.empty-info>i {
+  color: var(--gr);
+  font-size: 14px;
+}
+
+.empty-info div {
+  min-width: 0;
+}
+
+.empty-info span {
+  display: block;
+  color: var(--tx);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.empty-info small {
+  display: block;
+  margin-top: 2px;
+  color: var(--mut);
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+.empty-qty {
+  flex-shrink: 0;
+}
+
+.empty-qty button {
+  background: var(--card);
+}
+
+.empty-qty button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--bd);
+  color: var(--mut);
+}
+
+.empty-qty button:disabled:hover {
+  border-color: var(--bd);
+  color: var(--mut);
+}
+
 .foot {
   padding: 20px 22px 22px;
   border-top: 1px solid var(--bd);

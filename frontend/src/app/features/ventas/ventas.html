@@ -49,9 +49,11 @@
         @if (showSearchResults()) {
         <div class="res on">
           @for (c of filteredClients(); track c.name) {
-          <button (click)="selectClient(c)">
+          <button type="button" (mousedown)="selectClient(c); $event.preventDefault()">
             <b>{{ c.name }}</b>
-            <small>Crédito disponible: Q {{ getAvailableCredit(c) | number:'1.2-2' }}</small>
+            <small>
+              Crédito disponible: Q {{ getAvailableCredit(c) | number:'1.2-2' }}
+            </small>
           </button>
           } @empty {
           <div class="nr">Sin clientes con crédito autorizado para "{{ searchQuery() }}"</div>
@@ -102,27 +104,82 @@
     <!-- Items en el Carrito -->
     <div class="items">
       @for (item of cart(); track $index) {
-      <div class="it">
-        <div class="nm">
-          <b>{{ item.name }}</b>
-          <small>Q {{ item.price | number:'1.2-2' }} c/u</small>
+
+      <div class="cart-item">
+
+        <!-- Producto y cantidad vendida -->
+        <div class="it">
+
+          <div class="nm">
+            <b>{{ item.name }}</b>
+            <small>
+              Q {{ item.price | number:'1.2-2' }} c/u
+            </small>
+          </div>
+
+          <div class="qty">
+            <button (click)="updateQty($index, -1)" aria-label="Disminuir cantidad">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+
+            <span>{{ item.qty }}</span>
+
+            <button (click)="updateQty($index, 1)" aria-label="Aumentar cantidad">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+
+          <button class="del" (click)="removeItem($index)" aria-label="Eliminar">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+
         </div>
-        <div class="qty">
-          <button (click)="updateQty($index, -1)" aria-label="Disminuir"><i class="fa-solid fa-minus"></i></button>
-          <span>{{ item.qty }}</span>
-          <button (click)="updateQty($index, 1)" aria-label="Aumentar"><i class="fa-solid fa-plus"></i></button>
+
+        <!-- Cilindros vacíos recibidos -->
+        <div class="empty-return">
+
+          <div class="empty-info">
+            <i class="fa-solid fa-rotate-left"></i>
+
+            <div>
+              <span>Vacíos recibidos</span>
+              <small>
+                ¿Cuántos cilindros devolvió el cliente?
+              </small>
+            </div>
+          </div>
+
+          <div class="qty empty-qty">
+
+            <button (click)="updateVacios($index, item.vaciosRecibidos - 1)" [disabled]="item.vaciosRecibidos <= 0"
+              aria-label="Disminuir vacíos recibidos">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+
+            <span>
+              {{ item.vaciosRecibidos }}
+            </span>
+
+            <button (click)="updateVacios($index, item.vaciosRecibidos + 1)"
+              [disabled]="item.vaciosRecibidos >= item.qty" aria-label="Aumentar vacíos recibidos">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+
+          </div>
+
         </div>
-        <button class="del" (click)="removeItem($index)" aria-label="Eliminar"><i
-            class="fa-solid fa-trash-can"></i></button>
+
       </div>
+
       } @empty {
+
       <div class="none">
         <i class="fa-solid fa-cart-shopping"></i>
         Selecciona productos
       </div>
+
       }
     </div>
-
     <!-- Pie de Carrito / Finalizar Venta -->
     <div class="foot">
       <div class="tot">

@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
+
 import { DatabaseService } from '../database/database.service.js';
 import { CreateProductoDto } from './dto/create-producto.dto.js';
 
@@ -13,11 +18,12 @@ export class ProductosService {
     }
 
     async create(createProductoDto: CreateProductoDto) {
-        const producto = await this.databaseService.db.orm.public.Producto.create({
-            nombre: createProductoDto.nombre,
-            pesoLb: createProductoDto.pesoLb,
-            precio: createProductoDto.precio.toString(),
-        });
+        const producto =
+            await this.databaseService.db.orm.public.Producto.create({
+                nombre: createProductoDto.nombre,
+                pesoLb: createProductoDto.pesoLb,
+                precio: createProductoDto.precio.toString(),
+            });
 
         await this.databaseService.db.orm.public.Inventario.create({
             productoId: producto.id,
@@ -32,5 +38,39 @@ export class ProductosService {
         });
 
         return producto;
+    }
+
+    async actualizarPrecio(id: number, precio: number) {
+        if (!Number.isFinite(precio) || precio < 0) {
+            throw new BadRequestException(
+                'El precio debe ser un número válido mayor o igual a 0',
+            );
+        }
+
+        const productos =
+            await this.databaseService.db.orm.public.Producto.all();
+
+        const producto = productos.find(
+            (item) => item.id === id,
+        );
+
+        if (!producto) {
+            throw new NotFoundException(
+                `Producto con id ${id} no encontrado`,
+            );
+        }
+
+        await this.databaseService.db.orm.public.Producto
+            .where({ id })
+            .update({
+                precio: precio.toString(),
+            });
+
+        const productosActualizados =
+            await this.databaseService.db.orm.public.Producto.all();
+
+        return productosActualizados.find(
+            (item) => item.id === id,
+        );
     }
 }
