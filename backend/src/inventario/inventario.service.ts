@@ -14,7 +14,7 @@ export class InventarioService {
     ) { }
 
     async findAll() {
-        return this.databaseService.db.orm.public.Inventario.all();
+        return await this.databaseService.db.orm.public.Inventario.all();
     }
 
     async inicializar() {
@@ -77,26 +77,23 @@ export class InventarioService {
         }
 
         // 2. Buscar producto
-        const productos =
-            await this.databaseService.db.orm.public.Producto.all();
-
-        const producto = productos.find(
-            (item) => item.id === dto.productoId,
-        );
+        const producto =
+            await this.databaseService.db.orm.public.Producto
+                .where({ id: dto.productoId })
+                .first();
 
         if (!producto) {
             throw new NotFoundException('Producto no encontrado');
         }
 
-        // 3. Buscar registro correspondiente del inventario
-        const inventarios =
-            await this.databaseService.db.orm.public.Inventario.all();
-
-        const inventario = inventarios.find(
-            (item) =>
-                item.productoId === dto.productoId &&
-                item.estado === dto.estado,
-        );
+        // 3. Buscar inventario del producto según su estado
+        const inventario =
+            await this.databaseService.db.orm.public.Inventario
+                .where({
+                    productoId: dto.productoId,
+                    estado: dto.estado,
+                })
+                .first();
 
         if (!inventario) {
             throw new NotFoundException(
@@ -135,26 +132,47 @@ export class InventarioService {
                 );
         }
 
-        // 5. Por ahora solamente simulamos el movimiento.
-        // Todavía NO modificamos PostgreSQL.
-        return {
-            usuarioId,
+        // 5. Actualizar cantidad real en PostgreSQL
+        const inventarioActualizado =
+            await this.databaseService.db.orm.public.Inventario
+                .where({ id: inventario.id })
+                .update({
+                    cantidad: nuevaCantidad,
+                });
 
+        if (!inventarioActualizado) {
+            throw new BadRequestException(
+                'No fue posible actualizar el inventario',
+            );
+        }
+
+        // 6. Registrar movimiento en el historial
+        const movimiento =
+            await this.databaseService.db.orm.public.MovimientoInventario.create({
+                productoId: dto.productoId,
+                usuarioId,
+                tipo: dto.tipo,
+                estado: dto.estado,
+                cantidad: dto.cantidad,
+                motivo: dto.motivo ?? null,
+                referencia: dto.referencia ?? null,
+            });
+
+        // 7. Respuesta
+        return {
             producto: {
                 id: producto.id,
                 nombre: producto.nombre,
                 pesoLb: producto.pesoLb,
             },
 
-            movimiento: {
-                tipo: dto.tipo,
-                estado: dto.estado,
-                cantidad: dto.cantidad,
+            inventario: {
                 cantidadAnterior: inventario.cantidad,
-                cantidadNueva: nuevaCantidad,
-                motivo: dto.motivo ?? null,
-                referencia: dto.referencia ?? null,
+                cantidadNueva: inventarioActualizado.cantidad,
+                estado: inventarioActualizado.estado,
             },
+
+            movimiento,
         };
     }
 }
