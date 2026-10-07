@@ -95,6 +95,12 @@
           <i class="fa-solid fa-circle-check"></i>Inicio de sesión correcto
         </div>
         }
+        @if (errorLogin) {
+        <div class="login-error" role="alert">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span>{{ errorLogin }}</span>
+        </div>
+        }
       </form>
     </section>
 
