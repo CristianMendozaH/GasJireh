@@ -22,12 +22,12 @@
   </div>
   <div class="card kpi c">
     <div class="lb">
-      COBROS HOY (PENDIENTE DE CONECTAR)
+      COBROS HOY
       <span class="ic" style="background:var(--gr-l);color:var(--gr)">
         <i class="fa-solid fa-hand-holding-dollar"></i>
       </span>
     </div>
-    <div class="v">{{ money(kpi.cob) }}</div>
+    <div class="v">{{ cobrosDisponibles ? money(kpi.cob) : '—' }}</div>
   </div>
 </section>
 
@@ -49,6 +49,7 @@
 
 <p *ngIf="cargando">Cargando cuentas...</p>
 <p *ngIf="errorCarga" class="err">{{ errorCarga }}</p>
+<p *ngIf="errorAbonos" class="err">{{ errorAbonos }}</p>
 
 <!-- Tabla de Cuentas por Cobrar -->
 <div class="card tw">
@@ -73,10 +74,15 @@
           <span class="tag" [ngClass]="cls[r.st]">{{ r.st }}</span>
         </td>
         <td>
-          <button *ngIf="r.debt > 0" class="ab" (click)="abrirModalAbono(r)">
-            <i class="fa-solid fa-hand-holding-dollar"></i>Registrar Abono
-          </button>
-          <span *ngIf="r.debt === 0" class="dash">—</span>
+          <div class="acciones-cuenta">
+            <button class="ab historial-btn" (click)="abrirHistorial(r)"
+              [attr.aria-label]="'Ver historial de ' + r.name">
+              <i class="fa-solid fa-clock-rotate-left"></i>Ver historial
+            </button>
+            <button *ngIf="r.debt > 0" class="ab" (click)="abrirModalAbono(r)">
+              <i class="fa-solid fa-hand-holding-dollar"></i>Registrar Abono
+            </button>
+          </div>
         </td>
       </tr>
       <tr *ngIf="filteredRows.length === 0">
@@ -116,6 +122,52 @@
       <button class="btn p" [disabled]="guardando" (click)="guardarAbono()">{{ guardando ? 'Guardando...' : 'Guardar
         abono' }}</button>
     </div>
+  </div>
+</div>
+
+
+<!-- Historial de abonos por cuenta -->
+<div class="ov" [class.on]="modalHistorialVisible" (click)="cerrarModalPorBackdrop($event)">
+  <div class="md historial-modal" role="dialog" aria-modal="true" aria-labelledby="tituloHistorial">
+    <div class="historial-header">
+      <div>
+        <h3 id="tituloHistorial">HISTORIAL DE ABONOS</h3>
+        <p *ngIf="cuentaHistorial" class="historial-subtitulo">{{ cuentaHistorial.name }} · Cuenta #{{
+          cuentaHistorial.id }}</p>
+      </div>
+      <button type="button" class="historial-cerrar" (click)="cerrarHistorial()" aria-label="Cerrar historial">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <p *ngIf="cargandoHistorial" class="historial-mensaje">Consultando abonos...</p>
+    <p *ngIf="errorHistorial" class="err">{{ errorHistorial }}</p>
+
+    <ng-container *ngIf="historial as h">
+      <div class="historial-resumen">
+        <div><span>Deuda original</span><strong>{{ money(+h.montoOriginal) }}</strong></div>
+        <div><span>Total abonado</span><strong class="historial-verde">{{ money(totalAbonadoHistorial()) }}</strong>
+        </div>
+        <div><span>Saldo pendiente</span><strong>{{ money(+h.saldoPendiente) }}</strong></div>
+      </div>
+      <div class="historial-estado">
+        <span>Estado de la cuenta</span>
+        <span class="tag" [ngClass]="cuentaHistorial ? cls[cuentaHistorial.st] : 'pe'">{{ cuentaHistorial?.st }}</span>
+      </div>
+      <h4 class="historial-seccion">Pagos registrados ({{ h.abonos.length }})</h4>
+      <div *ngIf="h.abonos.length === 0" class="historial-vacio">Esta cuenta todavía no tiene abonos registrados.</div>
+      <div class="historial-lista" *ngIf="h.abonos.length > 0">
+        <div class="historial-item" *ngFor="let a of h.abonos; let i = index">
+          <div class="historial-item-top">
+            <div><strong>Abono #{{ i + 1 }}</strong><small>{{ fechaAbono(a.creadoEn) }}</small></div>
+            <strong class="historial-verde">{{ money(+a.monto) }}</strong>
+          </div>
+          <p *ngIf="a.observacion">{{ a.observacion }}</p>
+          <div class="historial-saldo">Saldo después del abono: <strong>{{ money(saldoTrasAbono(i)) }}</strong></div>
+        </div>
+      </div>
+    </ng-container>
+    <div class="mf"><button class="btn s" type="button" (click)="cerrarHistorial()">Cerrar</button></div>
   </div>
 </div>
 

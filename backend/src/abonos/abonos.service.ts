@@ -17,6 +17,30 @@ export class AbonosService {
     return this.databaseService.db.orm.public.Abono.all();
   }
 
+  async findByCuenta(cuentaCobrarId: number) {
+    const cuenta = await this.databaseService.db.orm.public.CuentaCobrar
+      .where({ id: cuentaCobrarId })
+      .first();
+
+    if (!cuenta) {
+      throw new NotFoundException('Cuenta por cobrar no encontrada');
+    }
+
+    const abonos = await this.databaseService.db.orm.public.Abono
+      .where({ cuentaCobrarId })
+      .all();
+
+    return {
+      cuentaCobrarId,
+      montoOriginal: cuenta.montoOriginal,
+      saldoPendiente: cuenta.saldoPendiente,
+      estado: cuenta.estado,
+      abonos: [...abonos].sort(
+        (a, b) => new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime(),
+      ),
+    };
+  }
+
   async create(
     createAbonoDto: CreateAbonoDto,
     usuarioId: number,

@@ -3,26 +3,33 @@
     <h1>GESTIÓN DE USUARIOS</h1>
     <p class="subt">Administra las cuentas de acceso al sistema</p>
   </div>
-  <button class="btn p" (click)="openModal(null)"><i class="fa-solid fa-plus"></i>Nuevo Usuario</button>
+  <button type="button" class="btn p" (click)="abrirNuevoUsuario()">
+    <i class="fa-solid fa-plus"></i> Nuevo Usuario
+  </button>
 </header>
 
 <section class="grid3">
   <div class="card kpi">
     <div class="lb">TOTAL USUARIOS<span class="ic" style="background:var(--or-l);color:var(--or)"><i
           class="fa-solid fa-users"></i></span></div>
-    <div class="v">{{ totalUsuarios }}</div>
+    <div class="v">{{ totalUsuarios() }}</div>
   </div>
   <div class="card kpi a">
     <div class="lb">USUARIOS ACTIVOS<span class="ic" style="background:var(--gr-l);color:var(--gr)"><i
           class="fa-solid fa-user-check"></i></span></div>
-    <div class="v">{{ usuariosActivos }}</div>
+    <div class="v">{{ usuariosActivos() }}</div>
   </div>
   <div class="card kpi i">
     <div class="lb">USUARIOS INACTIVOS<span class="ic" style="background:var(--rd-l);color:var(--rd)"><i
           class="fa-solid fa-user-slash"></i></span></div>
-    <div class="v">{{ usuariosInactivos }}</div>
+    <div class="v">{{ usuariosInactivos() }}</div>
   </div>
 </section>
+
+<p class="subt" *ngIf="cargando()">Cargando usuarios desde PostgreSQL...</p>
+<p class="subt" *ngIf="errorCarga()" role="alert">{{ errorCarga() }} <button type="button" class="btn s"
+    (click)="cargarUsuarios()">Reintentar</button></p>
+<p *ngIf="mensajeExito()" role="status" style="margin:14px 0;color:#16845b;font-weight:600">{{ mensajeExito() }}</p>
 
 <div class="card tw">
   <table>
@@ -37,8 +44,8 @@
       </tr>
     </thead>
     <tbody>
-      @for (u of users; track u.user; let i = $index) {
-      <tr [class.off]="!u.active" [class.new]="u === newest">
+      @for (u of users(); track u.id) {
+      <tr [class.off]="!u.active">
         <td>
           <div class="avc" [ngClass]="u.role">{{ initials(u.name) }}</div>
         </td>
@@ -48,27 +55,14 @@
         <td><span class="tag" [class.on]="u.active" [class.of]="!u.active">{{ u.active ? 'Activo' : 'Inactivo' }}</span>
         </td>
         <td>
-          <div class="ac">
-            <button class="ic-b" (click)="openModal(i)" title="Editar" [attr.aria-label]="'Editar ' + u.name">
-              <i class="fa-solid fa-pen"></i>
-            </button>
-            <button class="ic-b tg" (click)="toggleEstado(i)" [disabled]="u.user === SELF"
-              [title]="u.user === SELF ? 'No disponible para tu propia cuenta' : (u.active ? 'Desactivar' : 'Activar')">
-              <i class="fa-solid" [class.fa-user-slash]="u.active" [class.fa-user-check]="!u.active"></i>
-            </button>
-            <button class="ic-b dl" (click)="confirmarEliminar(i)" [disabled]="u.user === SELF"
-              [title]="u.user === SELF ? 'No disponible para tu propia cuenta' : 'Eliminar'">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
+          <div class="ac"><span class="un">Próximamente</span></div>
         </td>
       </tr>
       } @empty {
       <tr>
         <td colspan="6">
-          <div class="none">
-            <i class="fa-regular fa-folder-open"></i>No hay usuarios registrados
-          </div>
+          <div class="none"><i class="fa-regular fa-folder-open"></i> {{ cargando() ? 'Cargando usuarios...' :
+            (errorCarga() ? 'No se pudo mostrar el listado' : 'No hay usuarios registrados') }}</div>
         </td>
       </tr>
       }
@@ -76,93 +70,64 @@
   </table>
 </div>
 
-<!-- Modal crear / editar -->
-<div class="ov" [class.on]="modalVisible">
-  <div class="md" role="dialog" aria-labelledby="mT">
-    <div class="mh">
-      <h3 id="mT">{{ editing === null ? 'NUEVO USUARIO' : 'EDITAR USUARIO' }}</h3>
-      <button class="x" (click)="closeModal()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+@if (modalAbierto()) {
+<div role="presentation"
+  style="position:fixed;inset:0;background:rgba(19,30,53,.57);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+  <section role="dialog" aria-modal="true" aria-labelledby="tituloNuevoUsuario"
+    style="background:#fff;border-radius:16px;width:100%;max-width:490px;padding:28px;box-shadow:0 18px 55px rgba(0,0,0,.2);color:#27364d">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:8px">
+      <h2 id="tituloNuevoUsuario" style="margin:0;font-size:21px;font-weight:800">Nuevo usuario</h2>
+      <button type="button" (click)="cerrarModal()" [disabled]="guardando()" aria-label="Cerrar formulario"
+        style="border:0;background:transparent;font-size:24px;cursor:pointer;color:#64748b">&times;</button>
     </div>
+    <p style="margin:0 0 22px;color:#7a869c;font-size:13px">Crea una cuenta de acceso para un empleado de Gas Jireh.</p>
 
-    <div class="fld" [class.bad]="!!eN">
-      <label for="uN">NOMBRE COMPLETO</label>
-      <input type="text" id="uN" [(ngModel)]="formName" (input)="eN = ''" (keydown.enter)="guardarUsuario()"
-        placeholder="Ej. María López" autocomplete="off">
-      <div class="err">{{ eN }}</div>
-    </div>
-
-    <div class="fld" [class.bad]="!!eU">
-      <label for="uU">NOMBRE DE USUARIO</label>
-      <input type="text" id="uU" [(ngModel)]="formUser" (input)="eU = ''" (keydown.enter)="guardarUsuario()"
-        [readonly]="isSelfEditing" placeholder="Ej. maria" autocomplete="off" autocapitalize="off">
-      <div class="err">{{ eU }}</div>
-    </div>
-
-    <div class="fld" [class.bad]="!!eP">
-      <label for="uP" id="lP">
-        {{ editing === null ? 'CONTRASEÑA' : 'NUEVA CONTRASEÑA' }}
-        <em *ngIf="editing !== null">(opcional)</em>
+    <form (ngSubmit)="guardarUsuario()" #nuevoUsuarioForm="ngForm" style="display:grid;gap:15px">
+      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
+        Nombre completo
+        <input name="nombreCompleto" [(ngModel)]="formulario.nombreCompleto" required maxlength="120"
+          autocomplete="name" placeholder="Ej. Carlos Mora"
+          style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;width:100%;box-sizing:border-box" />
       </label>
-      <div class="pw">
-        <input [type]="showPw ? 'text' : 'password'" id="uP" [(ngModel)]="formPw" (input)="eP = ''"
-          (keydown.enter)="guardarUsuario()" autocomplete="new-password"
-          [placeholder]="editing === null ? 'Mínimo 8 caracteres' : 'Déjala en blanco para conservar la actual'">
-        <button type="button" class="eye" (click)="showPw = !showPw"
-          [title]="showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-          <i class="fa-solid" [class.fa-eye-slash]="showPw" [class.fa-eye]="!showPw"></i>
-        </button>
-      </div>
-      <div class="err">{{ eP }}</div>
-    </div>
-
-    <div class="fld" [class.bad]="!!eR">
-      <label for="uR">ROL</label>
-      <select id="uR" [(ngModel)]="formRole" (change)="eR = ''" [disabled]="isSelfEditing">
-        <option value="">Selecciona un rol</option>
-        <option value="Administrador">Administrador</option>
-        <option value="Vendedor">Vendedor</option>
-        <option value="Bodeguero">Bodeguero</option>
-      </select>
-      <div class="err">{{ eR }}</div>
-    </div>
-
-    <div class="sw">
-      <div>
-        <b>USUARIO ACTIVO</b>
-        <small>{{ formActive ? 'Puede iniciar sesión en el sistema' : 'Acceso bloqueado al sistema' }}</small>
-      </div>
-      <label class="tgl">
-        <input type="checkbox" [(ngModel)]="formActive" [disabled]="isSelfEditing" aria-label="Usuario activo">
-        <i></i>
+      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
+        Nombre de usuario
+        <input name="username" [(ngModel)]="formulario.username" required minlength="3" maxlength="30"
+          pattern="[a-z0-9._-]{3,30}" autocomplete="off" placeholder="Ej. carlos"
+          style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;width:100%;box-sizing:border-box" />
+        <small style="color:#7a869c;font-weight:400">De 3 a 30 caracteres, en minúsculas y sin espacios.</small>
       </label>
-    </div>
-
-    <div class="mf" style="margin-top:22px">
-      <button class="btn p big" (click)="guardarUsuario()">
-        {{ editing === null ? 'CREAR USUARIO' : 'GUARDAR CAMBIOS' }}
-      </button>
-    </div>
-  </div>
+      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
+        Contraseña
+        <span style="display:flex;gap:8px">
+          <input name="password" [(ngModel)]="formulario.password" [type]="mostrarPassword() ? 'text' : 'password'"
+            required minlength="8" maxlength="128" autocomplete="new-password" placeholder="Mínimo 8 caracteres"
+            style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;flex:1;min-width:0" />
+          <button type="button" (click)="mostrarPassword.set(!mostrarPassword())"
+            [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            style="border:1px solid #dce1ea;background:#fff;border-radius:9px;padding:0 12px;cursor:pointer"><i
+              class="fa-solid" [ngClass]="mostrarPassword() ? 'fa-eye-slash' : 'fa-eye'"></i></button>
+        </span>
+      </label>
+      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
+        Rol del empleado
+        <select name="rol" [(ngModel)]="formulario.rol" required
+          style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;background:#fff">
+          <option value="VENDEDOR">Vendedor</option>
+          <option value="BODEGUERO">Bodeguero</option>
+          <option value="ADMINISTRADOR">Administrador</option>
+        </select>
+      </label>
+      <p style="margin:0;font-size:12px;color:#7a869c">El usuario se creará con estado <strong>Activo</strong>.</p>
+      @if (errorFormulario()) {
+      <p role="alert" style="margin:0;padding:11px;border-radius:8px;background:#fff0f0;color:#b4232c;font-size:13px">{{
+        errorFormulario() }}</p>
+      }
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:7px">
+        <button type="button" class="btn s" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
+        <button type="submit" class="btn p" [disabled]="guardando() || nuevoUsuarioForm.invalid">{{ guardando() ?
+          'Guardando...' : 'Crear usuario' }}</button>
+      </div>
+    </form>
+  </section>
 </div>
-
-<!-- Modal confirmar eliminación -->
-<div class="ov" [class.on]="modalDelVisible">
-  <div class="md warn" role="alertdialog" aria-labelledby="dT">
-    <div class="ck"><i class="fa-solid fa-trash-can"></i></div>
-    <h3 id="dT">ELIMINAR USUARIO</h3>
-    <p class="sub" *ngIf="delIdx !== null">
-      Se eliminará la cuenta de <b>{{ users[delIdx].name }}</b> ({{ users[delIdx].user }}). Esta acción no se puede
-      deshacer.
-    </p>
-    <div class="mf">
-      <button class="btn s" (click)="modalDelVisible = false">Cancelar</button>
-      <button class="btn d" (click)="eliminarUsuario()"><i class="fa-solid fa-trash-can"></i>Sí, eliminar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div class="toast" [class.on]="toastVisible">
-  <i class="fa-solid fa-circle-check"></i>
-  <span>{{ toastMsg }}</span>
-</div>
+}

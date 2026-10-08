@@ -1,12 +1,31 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 export interface Usuario {
+  id: number;
   name: string;
   user: string;
-  role: string;
+  role: 'Administrador' | 'Vendedor' | 'Bodeguero';
   active: boolean;
+}
+
+type RolApi = 'ADMINISTRADOR' | 'VENDEDOR' | 'BODEGUERO';
+
+interface UsuarioApi {
+  id: number;
+  nombreCompleto: string;
+  username: string;
+  rol: RolApi;
+  activo: boolean;
+}
+
+interface NuevoUsuario {
+  nombreCompleto: string;
+  username: string;
+  password: string;
+  rol: RolApi;
 }
 
 @Component({
@@ -14,169 +33,150 @@ export interface Usuario {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './usuarios.html',
-  styleUrl: './usuarios.css'
+  styleUrl: './usuarios.css',
 })
-export class Usuarios {
-  readonly SELF = 'admin'; // Cuenta con la sesión activa actual[cite: 16]
+export class Usuarios implements OnInit {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = 'http://localhost:3000/usuarios';
 
-  users: Usuario[] = [
-    { name: 'Administrador', user: 'admin', role: 'Administrador', active: true },
-    { name: 'Carlos Mora', user: 'carlos', role: 'Vendedor', active: true },
-    { name: 'Luis García', user: 'luis', role: 'Bodeguero', active: true }
-  ];
+  readonly users = signal<Usuario[]>([]);
+  readonly cargando = signal(false);
+  readonly errorCarga = signal('');
+  readonly modalAbierto = signal(false);
+  readonly guardando = signal(false);
+  readonly errorFormulario = signal('');
+  readonly mensajeExito = signal('');
+  readonly mostrarPassword = signal(false);
 
-  editing: number | null = null;
-  delIdx: number | null = null;
-  newest: Usuario | null = null;
+  formulario: NuevoUsuario = this.formularioVacio();
 
-  // Estados del modal y formularios
-  modalVisible = false;
-  modalDelVisible = false;
-  showPw = false;
+  readonly totalUsuarios = computed(() => this.users().length);
+  readonly usuariosActivos = computed(() => this.users().filter(u => u.active).length);
+  readonly usuariosInactivos = computed(() => this.totalUsuarios() - this.usuariosActivos());
 
-  formName = '';
-  formUser = '';
-  formRole = '';
-  formPw = '';
-  formActive = true;
-
-  // Errores de validación
-  eN = '';
-  eU = '';
-  eP = '';
-  eR = '';
-
-  // Toast
-  toastMsg = '';
-  toastVisible = false;
-  private toastTimer: any;
-
-  get totalUsuarios(): number {
-    return this.users.length;
+  ngOnInit(): void {
+    this.cargarUsuarios();
   }
 
-  get usuariosActivos(): number {
-    return this.users.filter(u => u.active).length;
+  cargarUsuarios(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
+
+    this.http.get<UsuarioApi[]>(this.apiUrl).subscribe({
+      next: (usuarios) => {
+        this.users.set(usuarios.map(u => ({
+          id: u.id,
+          name: u.nombreCompleto,
+          user: u.username,
+          role: this.nombreRol(u.rol),
+          active: u.activo,
+        })));
+        this.cargando.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.users.set([]);
+        this.cargando.set(false);
+        if (error.status === 401) {
+          this.errorCarga.set('Tu sesión no es válida o ha expirado. Inicia sesión nuevamente.');
+        } else if (error.status === 403) {
+          this.errorCarga.set('Tu cuenta no tiene permisos para consultar usuarios.');
+        } else if (error.status === 0) {
+          this.errorCarga.set('No se pudo conectar con el servidor.');
+        } else {
+          this.errorCarga.set('No se pudo cargar la lista de usuarios.');
+        }
+      },
+    });
   }
 
-  get usuariosInactivos(): number {
-    return this.totalUsuarios - this.usuariosActivos;
+  abrirNuevoUsuario(): void {
+    this.formulario = this.formularioVacio();
+    this.errorFormulario.set('');
+    this.mensajeExito.set('');
+    this.mostrarPassword.set(false);
+    this.modalAbierto.set(true);
   }
 
-  get isSelfEditing(): boolean {
-    return this.editing !== null && this.users[this.editing].user === this.SELF;
+  cerrarModal(): void {
+    if (this.guardando()) return;
+    this.modalAbierto.set(false);
+    this.errorFormulario.set('');
+    this.formulario = this.formularioVacio();
+  }
+
+  guardarUsuario(): void {
+    if (this.guardando()) return;
+
+    const datos: NuevoUsuario = {
+      nombreCompleto: this.formulario.nombreCompleto.trim(),
+      username: this.formulario.username.trim().toLowerCase(),
+      password: this.formulario.password,
+      rol: this.formulario.rol,
+    };
+
+    if (!datos.nombreCompleto || datos.nombreCompleto.length > 120) {
+      this.errorFormulario.set('Ingresa un nombre completo válido (máximo 120 caracteres).');
+      return;
+    }
+    if (!/^[a-z0-9._-]{3,30}$/.test(datos.username)) {
+      this.errorFormulario.set('El usuario debe tener de 3 a 30 caracteres: minúsculas, números, puntos, guiones o guion bajo.');
+      return;
+    }
+    if (datos.password.length < 8 || datos.password.length > 128) {
+      this.errorFormulario.set('La contraseña debe tener entre 8 y 128 caracteres.');
+      return;
+    }
+    if (!['ADMINISTRADOR', 'VENDEDOR', 'BODEGUERO'].includes(datos.rol)) {
+      this.errorFormulario.set('Selecciona un rol válido.');
+      return;
+    }
+
+    this.guardando.set(true);
+    this.errorFormulario.set('');
+
+    this.http.post<UsuarioApi>(this.apiUrl, datos).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.modalAbierto.set(false);
+        this.formulario = this.formularioVacio();
+        this.mensajeExito.set(`Usuario «${datos.username}» creado correctamente.`);
+        this.cargarUsuarios();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.guardando.set(false);
+        if (error.status === 409) {
+          this.errorFormulario.set('Ese nombre de usuario ya está registrado. Prueba con otro.');
+        } else if (error.status === 401) {
+          this.errorFormulario.set('Tu sesión expiró. Inicia sesión nuevamente.');
+        } else if (error.status === 403) {
+          this.errorFormulario.set('No tienes permisos para crear usuarios.');
+        } else if (error.status === 0) {
+          this.errorFormulario.set('No se pudo conectar con NestJS.');
+        } else if (error.status === 400) {
+          const mensaje = error.error?.message;
+          this.errorFormulario.set(Array.isArray(mensaje) ? mensaje.join(' · ') : (typeof mensaje === 'string' ? mensaje : 'Revisa los datos ingresados.'));
+        } else {
+          this.errorFormulario.set('No se pudo crear el usuario. Intenta nuevamente.');
+        }
+      },
+    });
+  }
+
+  private formularioVacio(): NuevoUsuario {
+    return { nombreCompleto: '', username: '', password: '', rol: 'VENDEDOR' };
+  }
+
+  private nombreRol(rol: RolApi): Usuario['role'] {
+    switch (rol) {
+      case 'ADMINISTRADOR': return 'Administrador';
+      case 'VENDEDOR': return 'Vendedor';
+      case 'BODEGUERO': return 'Bodeguero';
+    }
   }
 
   initials(name: string): string {
-    const words = name.trim().split(/\s+/);
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return '?';
     return (words.length > 1 ? words[0][0] + words[1][0] : words[0][0]).toUpperCase();
-  }
-
-  toast(m: string) {
-    this.toastMsg = m;
-    this.toastVisible = true;
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => (this.toastVisible = false), 2600);
-  }
-
-  openModal(index: number | null) {
-    this.editing = index;
-    this.eN = ''; this.eU = ''; this.eP = ''; this.eR = '';
-    this.showPw = false;
-
-    if (index === null) {
-      this.formName = '';
-      this.formUser = '';
-      this.formRole = '';
-      this.formPw = '';
-      this.formActive = true;
-    } else {
-      const u = this.users[index];
-      this.formName = u.name;
-      this.formUser = u.user;
-      this.formRole = u.role;
-      this.formPw = '';
-      this.formActive = u.active;
-    }
-    this.modalVisible = true;
-  }
-
-  closeModal() {
-    this.modalVisible = false;
-  }
-
-  toggleEstado(index: number) {
-    const u = this.users[index];
-    if (u.user === this.SELF) return;
-    u.active = !u.active;
-    this.newest = null;
-    this.toast(`Usuario "${u.user}" ${u.active ? 'activado' : 'desactivado'}`);
-  }
-
-  confirmarEliminar(index: number) {
-    if (this.users[index].user === this.SELF) return;
-    this.delIdx = index;
-    this.modalDelVisible = true;
-  }
-
-  eliminarUsuario() {
-    if (this.delIdx !== null) {
-      const u = this.users.splice(this.delIdx, 1)[0];
-      this.newest = null;
-      this.modalDelVisible = false;
-      this.delIdx = null;
-      this.toast(`Usuario "${u.user}" eliminado`);
-    }
-  }
-
-  guardarUsuario() {
-    const name = this.formName.trim().replace(/\s+/g, ' ');
-    const user = this.formUser.trim().toLowerCase();
-    const role = this.formRole;
-    const pw = this.formPw;
-    const active = this.formActive;
-
-    this.eN = !name ? 'El nombre completo es obligatorio' : '';
-
-    if (!user) {
-      this.eU = 'El nombre de usuario es obligatorio';
-    } else if (!/^[a-z0-9._-]{3,}$/.test(user)) {
-      this.eU = 'Mínimo 3 caracteres, sin espacios ni tildes';
-    } else if (this.users.some((u, i) => i !== this.editing && u.user === user)) {
-      this.eU = 'Ese nombre de usuario ya existe';
-    } else {
-      this.eU = '';
-    }
-
-    if (this.editing === null && !pw) {
-      this.eP = 'La contraseña es obligatoria';
-    } else if (pw && pw.length < 8) {
-      this.eP = 'La contraseña debe tener al menos 8 caracteres';
-    } else {
-      this.eP = '';
-    }
-
-    this.eR = !role ? 'Selecciona un rol' : '';
-
-    if (this.eN || this.eU || this.eP || this.eR) return;
-
-    if (this.editing === null) {
-      this.newest = { name, user, role, active };
-      this.users.push(this.newest);
-      this.toast('Usuario creado correctamente');
-    } else {
-      const old = this.users[this.editing];
-      Object.assign(old, { name, user, role, active });
-      this.newest = old;
-      this.toast('Usuario actualizado correctamente');
-    }
-
-    this.closeModal();
-  }
-
-  @HostListener('document:keydown.escape')
-  handleEscape() {
-    this.closeModal();
-    this.modalDelVisible = false;
   }
 }

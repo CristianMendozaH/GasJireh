@@ -1,50 +1,81 @@
-@if (!esRutaLogin) {
-<aside class="sb" [class.on]="sidebarAbierto">
+@if (mostrarMenu()) {
+<aside class="sb" [class.on]="sidebarAbierto()">
   <div class="logo">
-    <div class="logo-m"><i class="fa-solid fa-fire-flame-curved"></i></div>
-    <div><b>GAS JIREH</b><small>Distribuidora de gas</small></div>
+    <div class="logo-m">
+      <i class="fa-solid fa-fire-flame-curved"></i>
+    </div>
+    <div>
+      <b>GAS JIREH</b>
+      <small>Distribuidora de gas</small>
+    </div>
   </div>
 
   <nav class="nav">
     <a routerLink="/dashboard" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="closeSb()">
-      <i class="fa-solid fa-table-columns"></i>Dashboard
+      <i class="fa-solid fa-table-columns"></i>
+      Dashboard
     </a>
+
+    @if (esAdministrador() || esVendedor()) {
     <a routerLink="/ventas" routerLinkActive="on" (click)="closeSb()">
-      <i class="fa-solid fa-cash-register"></i>Registrar Venta
+      <i class="fa-solid fa-cash-register"></i>
+      Registrar Venta
     </a>
+
     <a routerLink="/cuentas-cobrar" routerLinkActive="on" (click)="closeSb()">
-      <i class="fa-solid fa-file-invoice-dollar"></i>Cuentas por Cobrar
+      <i class="fa-solid fa-file-invoice-dollar"></i>
+      Cuentas por Cobrar
     </a>
+    }
+
     <a routerLink="/inventario" routerLinkActive="on" (click)="closeSb()">
-      <i class="fa-solid fa-boxes-stacked"></i>Inventario
+      <i class="fa-solid fa-boxes-stacked"></i>
+      Inventario
     </a>
+
+    @if (esAdministrador() || esVendedor()) {
     <a routerLink="/clientes" routerLinkActive="on" (click)="closeSb()">
-      <i class="fa-solid fa-users"></i>Clientes
+      <i class="fa-solid fa-users"></i>
+      Clientes
     </a>
+    }
+
+    @if (esAdministrador()) {
     <a routerLink="/usuarios" routerLinkActive="on" (click)="closeSb()">
-      <i class="fa-solid fa-user-gear"></i>Usuarios
+      <i class="fa-solid fa-user-gear"></i>
+      Usuarios
     </a>
+    }
   </nav>
 
   <div class="user">
     <div class="u-row">
-      <div class="av">A</div>
-      <div><b>Administrador</b><small>Administrador</small></div>
+      <div class="av">
+        {{ inicialesUsuario() }}
+      </div>
+
+      <div>
+        <b>{{ nombreUsuario() }}</b>
+        <small>{{ nombreRol() }}</small>
+      </div>
     </div>
-    <button class="out" (click)="cerrarSesion()">
-      <i class="fa-solid fa-right-from-bracket"></i>Cerrar Sesión
+
+    <button class="out" type="button" (click)="cerrarSesion()">
+      <i class="fa-solid fa-right-from-bracket"></i>
+      Cerrar Sesión
     </button>
   </div>
 </aside>
 
-<div class="scrim" [class.on]="sidebarAbierto" (click)="closeSb()"></div>
+<div class="scrim" [class.on]="sidebarAbierto()" (click)="closeSb()"></div>
 }
 
-<main class="main" [class.full-width]="esRutaLogin">
-  @if (!esRutaLogin) {
-  <button class="burger" (click)="toggleSidebar()" aria-label="Abrir menú">
+<main class="main" [class.full-width]="!mostrarMenu()">
+  @if (mostrarMenu()) {
+  <button class="burger" type="button" (click)="toggleSidebar()" aria-label="Abrir menú">
     <i class="fa-solid fa-bars"></i>
   </button>
   }
+
   <router-outlet></router-outlet>
 </main>

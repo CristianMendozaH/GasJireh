@@ -19,6 +19,23 @@ interface CuentaApi {
   creadoEn?: string;
 }
 
+interface AbonoApi {
+  id: number;
+  cuentaCobrarId: number;
+  monto: string | number;
+  creadoEn: string;
+  observacion?: string | null;
+  usuarioId?: number;
+}
+
+interface HistorialCuentaApi {
+  cuentaCobrarId: number;
+  montoOriginal: string | number;
+  saldoPendiente: string | number;
+  estado: string;
+  abonos: AbonoApi[];
+}
+
 export interface CuentaCliente {
   id: number; // Identificador de la cuenta por cobrar, no del cliente
   name: string;
@@ -40,15 +57,21 @@ export class CuentasCobrar implements OnInit {
   private readonly api = 'http://localhost:3000';
   rows: CuentaCliente[] = [];
   kpi = { tot: 0, ven: 0, cob: 0 };
-  // La API de cuentas devuelve totales abonados históricos, no cobros por fecha.
-  // Cobros hoy queda en cero hasta disponer de un GET /abonos con fechas.
   cargando = false;
   errorCarga = '';
+  errorAbonos = '';
+  cobrosDisponibles = false;
   guardando = false;
   filter: 'all' | EstadoCuenta = 'all';
   cls: Record<EstadoCuenta, string> = {
     'Vencido': 'v', 'Pendiente': 'pe', 'Al Día': 'ok'
   };
+  modalHistorialVisible = false;
+  cuentaHistorial: CuentaCliente | null = null;
+  historial: HistorialCuentaApi | null = null;
+  cargandoHistorial = false;
+  errorHistorial = '';
+  private historialRequestId = 0;
   modalAbonoVisible = false;
   cuentaSeleccionada: CuentaCliente | null = null;
   montoAbono = 0;
@@ -77,20 +100,48 @@ export class CuentasCobrar implements OnInit {
     this.errorCarga = '';
     try {
       const cuentas = await firstValueFrom(this.http.get<CuentaApi[]>(`${this.api}/cuentas-cobrar`));
+      let abonos: AbonoApi[] = [];
+      this.cobrosDisponibles = false;
+      this.errorAbonos = '';
+      try {
+        abonos = await firstValueFrom(this.http.get<AbonoApi[]>(`${this.api}/abonos`));
+        this.cobrosDisponibles = true;
+      } catch {
+        this.errorAbonos = 'No se pudo consultar el historial de abonos. Las fechas y cobros de hoy no están disponibles.';
+      }
+
+      const ultimos = new Map<number, Date>();
+      let cobrosHoyCentavos = 0;
+      const hoy = this.fechaLocalISO();
+      for (const abono of abonos) {
+        const fecha = new Date(abono.creadoEn);
+        if (Number.isNaN(fecha.getTime())) continue;
+        const anterior = ultimos.get(abono.cuentaCobrarId);
+        if (!anterior || fecha > anterior) ultimos.set(abono.cuentaCobrarId, fecha);
+        const fechaLocal = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+        if (fechaLocal === hoy) {
+          const monto = Number(abono.monto);
+          if (Number.isFinite(monto)) cobrosHoyCentavos += Math.round(monto * 100);
+        }
+      }
       this.rows = cuentas.map(c => ({
         id: c.id,
         name: c.cliente?.nombre ?? 'Cliente no identificado',
         tel: c.cliente?.telefono || '—',
         debt: Number(c.saldoPendiente) || 0,
-        last: '—', // El endpoint no incluye la fecha del último abono.
+        last: ultimos.has(c.id)
+          ? ultimos.get(c.id)!.toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })
+          : '—',
         st: this.estadoVisual(c),
         ventaId: c.venta?.id
       }));
       this.kpi.tot = this.rows.reduce((s, r) => s + r.debt, 0);
       this.kpi.ven = this.rows.filter(r => r.st === 'Vencido').reduce((s, r) => s + r.debt, 0);
-      this.kpi.cob = 0; // No inventar el dato de cobros de hoy.
+      this.kpi.cob = cobrosHoyCentavos / 100;
     } catch {
       this.errorCarga = 'No se pudieron cargar las cuentas. Comprueba que NestJS esté ejecutándose.';
+      this.errorAbonos = '';
+      this.cobrosDisponibles = false;
       this.rows = [];
       this.kpi = { tot: 0, ven: 0, cob: 0 };
     } finally {
@@ -120,16 +171,72 @@ export class CuentasCobrar implements OnInit {
     this.errorMsg = '';
     this.modalAbonoVisible = true;
   }
+  async abrirHistorial(cuenta: CuentaCliente): Promise<void> {
+    const requestId = ++this.historialRequestId;
+    this.cuentaHistorial = cuenta;
+    this.historial = null;
+    this.errorHistorial = '';
+    this.cargandoHistorial = true;
+    this.modalHistorialVisible = true;
+    try {
+      const resultado = await firstValueFrom(
+        this.http.get<HistorialCuentaApi>(`${this.api}/abonos/cuenta/${cuenta.id}`)
+      );
+      if (requestId !== this.historialRequestId) return;
+      this.historial = {
+        ...resultado,
+        abonos: [...(resultado.abonos ?? [])].sort((a, b) =>
+          new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime()
+        )
+      };
+    } catch {
+      if (requestId !== this.historialRequestId) return;
+      this.errorHistorial = 'No se pudo consultar el historial de esta cuenta.';
+    } finally {
+      if (requestId === this.historialRequestId) {
+        this.cargandoHistorial = false;
+        this.cdr.detectChanges();
+      }
+    }
+  }
+  cerrarHistorial(): void {
+    ++this.historialRequestId;
+    this.modalHistorialVisible = false;
+    this.cuentaHistorial = null;
+    this.historial = null;
+    this.cargandoHistorial = false;
+    this.errorHistorial = '';
+  }
+  totalAbonadoHistorial(): number {
+    if (!this.historial) return 0;
+    return this.historial.abonos.reduce((total, abono) => total + Number(abono.monto), 0);
+  }
+  saldoTrasAbono(index: number): number {
+    if (!this.historial) return 0;
+    const abonado = this.historial.abonos.slice(0, index + 1)
+      .reduce((total, abono) => total + Number(abono.monto), 0);
+    return Math.max(0, Number(this.historial.montoOriginal) - abonado);
+  }
+  fechaAbono(fecha: string): string {
+    const d = new Date(fecha);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
+  }
   cerrarModal(): void {
     if (this.guardando) return;
     this.modalAbonoVisible = false;
     this.cuentaSeleccionada = null;
   }
   cerrarModalPorBackdrop(e: MouseEvent): void {
-    if ((e.target as HTMLElement).classList.contains('ov')) this.cerrarModal();
+    if ((e.target as HTMLElement).classList.contains('ov')) {
+      if (this.modalHistorialVisible) this.cerrarHistorial();
+      else this.cerrarModal();
+    }
   }
   @HostListener('document:keydown.escape')
-  handleEscape(): void { if (this.modalAbonoVisible) this.cerrarModal(); }
+  handleEscape(): void {
+    if (this.modalHistorialVisible) this.cerrarHistorial();
+    else if (this.modalAbonoVisible) this.cerrarModal();
+  }
 
   async guardarAbono(): Promise<void> {
     if (!this.cuentaSeleccionada || this.guardando) return;

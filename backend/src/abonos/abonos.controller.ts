@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  ParseIntPipe,
   Post,
 } from '@nestjs/common';
 
@@ -17,6 +19,13 @@ export class AbonosController {
   @Get()
   findAll() {
     return this.abonosService.findAll();
+  }
+
+  @Get('cuenta/:cuentaCobrarId')
+  findByCuenta(
+    @Param('cuentaCobrarId', ParseIntPipe) cuentaCobrarId: number,
+  ) {
+    return this.abonosService.findByCuenta(cuentaCobrarId);
   }
 
   @Post()
