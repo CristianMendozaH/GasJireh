@@ -288,431 +288,453 @@ export class VentasService {
     createVentaDto: CreateVentaDto,
     usuarioId: number,
   ) {
-    const {
-      clienteId,
-      tipo,
-      detalles,
-      fechaVencimiento,
-    } = createVentaDto;
+    return this.databaseService.db.transaction(async (tx) => {
+      const {
+        clienteId,
+        tipo,
+        detalles,
+        fechaVencimiento,
+      } = createVentaDto;
 
-    // =========================================================
-    // 1. VALIDACIONES GENERALES
-    // =========================================================
+      // =========================================================
+      // 1. VALIDACIONES GENERALES
+      // =========================================================
 
-    if (!detalles || detalles.length === 0) {
-      throw new BadRequestException(
-        'La venta debe contener al menos un producto',
-      );
-    }
-
-    if (tipo === 'CREDITO' && !clienteId) {
-      throw new BadRequestException(
-        'Una venta al crédito requiere un cliente',
-      );
-    }
-
-    // =========================================================
-    // 2. OBTENER PRODUCTOS
-    // =========================================================
-
-    const productos =
-      await this.databaseService.db.orm.public.Producto.all();
-
-    let total = 0;
-
-    const detallesPreparados = detalles.map(
-      (detalle) => {
-        const producto = productos.find(
-          (item) =>
-            item.id === detalle.productoId,
+      if (!detalles || detalles.length === 0) {
+        throw new BadRequestException(
+          'La venta debe contener al menos un producto',
         );
+      }
 
-        if (!producto) {
-          throw new NotFoundException(
-            `Producto ${detalle.productoId} no encontrado`,
+      if (tipo === 'CREDITO' && !clienteId) {
+        throw new BadRequestException(
+          'Una venta al crédito requiere un cliente',
+        );
+      }
+
+      // =========================================================
+      // 2. OBTENER PRODUCTOS
+      // =========================================================
+
+      const productos =
+        await tx.orm.public.Producto.all();
+
+      let total = 0;
+
+      const detallesPreparados = detalles.map(
+        (detalle) => {
+          const producto = productos.find(
+            (item) =>
+              item.id === detalle.productoId,
           );
-        }
 
-        if (
-          !Number.isInteger(detalle.cantidad) ||
-          detalle.cantidad <= 0
-        ) {
-          throw new BadRequestException(
-            'La cantidad vendida debe ser un número entero mayor que 0',
-          );
-        }
+          if (!producto) {
+            throw new NotFoundException(
+              `Producto ${detalle.productoId} no encontrado`,
+            );
+          }
 
-        const vaciosRecibidos =
-          detalle.vaciosRecibidos ?? 0;
+          if (
+            !Number.isInteger(detalle.cantidad) ||
+            detalle.cantidad <= 0
+          ) {
+            throw new BadRequestException(
+              'La cantidad vendida debe ser un número entero mayor que 0',
+            );
+          }
 
-        if (
-          !Number.isInteger(vaciosRecibidos) ||
-          vaciosRecibidos < 0
-        ) {
-          throw new BadRequestException(
-            'La cantidad de cilindros vacíos debe ser un número entero igual o mayor que 0',
-          );
-        }
+          const vaciosRecibidos =
+            detalle.vaciosRecibidos ?? 0;
 
-        // =========================================================
-        // OBTENER PRECIO REAL DEL PRODUCTO DESDE POSTGRESQL
-        // =========================================================
+          if (
+            !Number.isInteger(vaciosRecibidos) ||
+            vaciosRecibidos < 0
+          ) {
+            throw new BadRequestException(
+              'La cantidad de cilindros vacíos debe ser un número entero igual o mayor que 0',
+            );
+          }
 
-        const precioUnitario =
-          Number(producto.precio);
+          // =========================================================
+          // OBTENER PRECIO REAL DEL PRODUCTO DESDE POSTGRESQL
+          // =========================================================
 
-        if (
-          !Number.isFinite(precioUnitario) ||
-          precioUnitario < 0
-        ) {
-          throw new BadRequestException(
-            `El producto ${producto.nombre} tiene un precio inválido`,
-          );
-        }
+          const precioUnitario =
+            Number(producto.precio);
 
-        // =========================================================
-        // CALCULAR SUBTOTAL
-        // =========================================================
+          if (
+            !Number.isFinite(precioUnitario) ||
+            precioUnitario < 0
+          ) {
+            throw new BadRequestException(
+              `El producto ${producto.nombre} tiene un precio inválido`,
+            );
+          }
 
-        const subtotal =
-          detalle.cantidad *
-          precioUnitario;
+          // =========================================================
+          // CALCULAR SUBTOTAL
+          // =========================================================
 
-        total += subtotal;
+          const subtotal =
+            detalle.cantidad *
+            precioUnitario;
 
-        // =========================================================
-        // PREPARAR DETALLE DE LA VENTA
-        // =========================================================
+          total += subtotal;
 
-        return {
-          producto,
-          productoId:
-            detalle.productoId,
-          cantidad:
-            detalle.cantidad,
-          precioUnitario,
-          subtotal,
-          vaciosRecibidos,
-        };
-      },
-    );
+          // =========================================================
+          // PREPARAR DETALLE DE LA VENTA
+          // =========================================================
 
-    // =========================================================
-    // VALIDAR LÍMITE DE CRÉDITO ANTES DE CREAR LA VENTA
-    // =========================================================
-
-    if (tipo === 'CREDITO') {
-      const clientes =
-        await this.databaseService.db.orm.public.Cliente.all();
-
-      const cliente = clientes.find(
-        (item) => item.id === clienteId,
-      );
-
-      if (!cliente) {
-        throw new NotFoundException(
-          `Cliente ${clienteId} no encontrado`,
-        );
-      }
-
-      if (cliente.estado !== 'ACTIVO') {
-        throw new BadRequestException(
-          'El cliente está inactivo y no puede comprar al crédito',
-        );
-      }
-
-      const limiteCredito = Number(cliente.limiteCredito);
-
-      if (!Number.isFinite(limiteCredito) || limiteCredito <= 0) {
-        throw new BadRequestException(
-          'El cliente no tiene crédito autorizado',
-        );
-      }
-
-      const cuentas =
-        await this.databaseService.db.orm.public.CuentaCobrar.all();
-
-      const ventas =
-        await this.databaseService.db.orm.public.Venta.all();
-
-      const ventasVigentes = new Set(
-        ventas
-          .filter(
-            (venta) =>
-              venta.clienteId === clienteId &&
-              venta.estado !== 'ANULADA',
-          )
-          .map((venta) => venta.id),
-      );
-
-      const deudaActual = cuentas
-        .filter((cuenta) => ventasVigentes.has(cuenta.ventaId))
-        .reduce(
-          (acumulado, cuenta) =>
-            acumulado + Number(cuenta.saldoPendiente),
-          0,
-        );
-
-      if (!Number.isFinite(deudaActual)) {
-        throw new BadRequestException(
-          'No se pudo calcular la deuda actual del cliente',
-        );
-      }
-
-      // Comparamos centavos para evitar diferencias por decimales.
-      const limiteCentavos = Math.round(limiteCredito * 100);
-      const deudaCentavos = Math.round(deudaActual * 100);
-      const ventaCentavos = Math.round(total * 100);
-      const disponibleCentavos = limiteCentavos - deudaCentavos;
-
-      if (ventaCentavos > disponibleCentavos) {
-        const disponible = Math.max(0, disponibleCentavos) / 100;
-        throw new BadRequestException(
-          `Crédito insuficiente para ${cliente.nombre}. ` +
-          `Disponible: Q${disponible.toFixed(2)}. ` +
-          `Total de la venta: Q${total.toFixed(2)}.`,
-        );
-      }
-    }
-
-    // =========================================================
-    // 3. OBTENER INVENTARIO
-    // =========================================================
-
-    const inventarios =
-      await this.databaseService.db.orm.public.Inventario.all();
-
-    // =========================================================
-    // 4. VERIFICAR EXISTENCIAS
-    // =========================================================
-
-    for (const detalle of detallesPreparados) {
-      const stockLleno = inventarios.find(
-        (item) =>
-          item.productoId ===
-          detalle.productoId &&
-          item.estado === 'LLENO',
-      );
-
-      if (!stockLleno) {
-        throw new BadRequestException(
-          `No existe inventario LLENO para ${detalle.producto.nombre}`,
-        );
-      }
-
-      if (
-        stockLleno.cantidad <
-        detalle.cantidad
-      ) {
-        throw new BadRequestException(
-          `Stock insuficiente para ${detalle.producto.nombre}. Disponible: ${stockLleno.cantidad}`,
-        );
-      }
-
-      const stockVacio = inventarios.find(
-        (item) =>
-          item.productoId ===
-          detalle.productoId &&
-          item.estado === 'VACIO',
-      );
-
-      if (!stockVacio) {
-        throw new BadRequestException(
-          `No existe inventario VACIO para ${detalle.producto.nombre}`,
-        );
-      }
-    }
-
-    // =========================================================
-    // 5. CREAR VENTA
-    // =========================================================
-
-    const venta =
-      await this.databaseService.db.orm.public.Venta.create(
-        {
-          usuarioId,
-          clienteId: clienteId ?? null,
-          tipo,
-          total: total.toFixed(2),
+          return {
+            producto,
+            productoId:
+              detalle.productoId,
+            cantidad:
+              detalle.cantidad,
+            precioUnitario,
+            subtotal,
+            vaciosRecibidos,
+          };
         },
       );
 
-    // =========================================================
-    // 6. CREAR DETALLES
-    // =========================================================
+      // =========================================================
+      // VALIDAR LÍMITE DE CRÉDITO ANTES DE CREAR LA VENTA
+      // =========================================================
 
-    const detallesCreados = [];
+      if (tipo === 'CREDITO') {
+        const clientes =
+          await tx.orm.public.Cliente.all();
 
-    for (const detalle of detallesPreparados) {
-      const detalleCreado =
-        await this.databaseService.db.orm.public.DetalleVenta.create(
-          {
-            ventaId: venta.id,
-            productoId:
-              detalle.productoId,
-            cantidad: detalle.cantidad,
-            precioUnitario:
-              detalle.precioUnitario.toFixed(
-                2,
-              ),
-            subtotal:
-              detalle.subtotal.toFixed(2),
-            vaciosRecibidos:
-              detalle.vaciosRecibidos,
-          },
+        const cliente = clientes.find(
+          (item) => item.id === clienteId,
         );
 
-      detallesCreados.push(
-        detalleCreado,
-      );
-    }
+        if (!cliente) {
+          throw new NotFoundException(
+            `Cliente ${clienteId} no encontrado`,
+          );
+        }
 
-    // =========================================================
-    // 7. ACTUALIZAR INVENTARIO
-    // =========================================================
+        if (cliente.estado !== 'ACTIVO') {
+          throw new BadRequestException(
+            'El cliente está inactivo y no puede comprar al crédito',
+          );
+        }
 
-    const movimientosInventario = [];
+        const limiteCredito = Number(cliente.limiteCredito);
 
-    for (const detalle of detallesPreparados) {
-      const stockLleno = inventarios.find(
-        (item) =>
-          item.productoId ===
-          detalle.productoId &&
-          item.estado === 'LLENO',
-      );
+        if (!Number.isFinite(limiteCredito) || limiteCredito <= 0) {
+          throw new BadRequestException(
+            'El cliente no tiene crédito autorizado',
+          );
+        }
 
-      const stockVacio = inventarios.find(
-        (item) =>
-          item.productoId ===
-          detalle.productoId &&
-          item.estado === 'VACIO',
-      );
+        const cuentas =
+          await tx.orm.public.CuentaCobrar.all();
 
-      if (!stockLleno || !stockVacio) {
-        throw new BadRequestException(
-          `Inventario incompleto para ${detalle.producto.nombre}`,
+        const ventas =
+          await tx.orm.public.Venta.all();
+
+        const ventasVigentes = new Set(
+          ventas
+            .filter(
+              (venta) =>
+                venta.clienteId === clienteId &&
+                venta.estado !== 'ANULADA',
+            )
+            .map((venta) => venta.id),
+        );
+
+        const deudaActual = cuentas
+          .filter((cuenta) => ventasVigentes.has(cuenta.ventaId))
+          .reduce(
+            (acumulado, cuenta) =>
+              acumulado + Number(cuenta.saldoPendiente),
+            0,
+          );
+
+        if (!Number.isFinite(deudaActual)) {
+          throw new BadRequestException(
+            'No se pudo calcular la deuda actual del cliente',
+          );
+        }
+
+        // Comparamos centavos para evitar diferencias por decimales.
+        const limiteCentavos = Math.round(limiteCredito * 100);
+        const deudaCentavos = Math.round(deudaActual * 100);
+        const ventaCentavos = Math.round(total * 100);
+        const disponibleCentavos = limiteCentavos - deudaCentavos;
+
+        if (ventaCentavos > disponibleCentavos) {
+          const disponible = Math.max(0, disponibleCentavos) / 100;
+          throw new BadRequestException(
+            `Crédito insuficiente para ${cliente.nombre}. ` +
+            `Disponible: Q${disponible.toFixed(2)}. ` +
+            `Total de la venta: Q${total.toFixed(2)}.`,
+          );
+        }
+      }
+
+      // =========================================================
+      // 3. OBTENER INVENTARIO
+      // =========================================================
+
+      const inventarios =
+        await tx.orm.public.Inventario.all();
+
+      // =========================================================
+      // 4. VERIFICAR EXISTENCIAS
+      // =========================================================
+
+      const cantidadesPorProducto = new Map<number, number>();
+
+      for (const detalle of detallesPreparados) {
+        const acumulado =
+          cantidadesPorProducto.get(detalle.productoId) ?? 0;
+
+        cantidadesPorProducto.set(
+          detalle.productoId,
+          acumulado + detalle.cantidad,
         );
       }
 
-      // ---------------------------------------------------------
-      // RESTAR CILINDROS LLENOS
-      // ---------------------------------------------------------
+      for (const [productoId, cantidadTotal] of cantidadesPorProducto) {
+        const producto = productos.find(
+          (item) => item.id === productoId,
+        );
 
-      const nuevaCantidadLlenos =
-        stockLleno.cantidad -
-        detalle.cantidad;
+        const stockLleno = inventarios.find(
+          (item) =>
+            item.productoId === productoId &&
+            item.estado === 'LLENO',
+        );
 
-      await this.databaseService.db.orm.public.Inventario
-        .where({
-          id: stockLleno.id,
-        })
-        .update({
-          cantidad:
-            nuevaCantidadLlenos,
-        });
+        const stockVacio = inventarios.find(
+          (item) =>
+            item.productoId === productoId &&
+            item.estado === 'VACIO',
+        );
 
-      // ---------------------------------------------------------
-      // REGISTRAR MOVIMIENTO DE VENTA
-      // ---------------------------------------------------------
+        if (!stockLleno || !stockVacio) {
+          throw new BadRequestException(
+            `Inventario incompleto para ${producto?.nombre ?? productoId}`,
+          );
+        }
 
-      const movimientoSalida =
-        await this.databaseService.db.orm.public.MovimientoInventario.create(
+        if (stockLleno.cantidad < cantidadTotal) {
+          throw new BadRequestException(
+            `Stock insuficiente para ${producto?.nombre ?? productoId}. ` +
+            `Disponible: ${stockLleno.cantidad}. ` +
+            `Solicitado: ${cantidadTotal}.`,
+          );
+        }
+      }
+
+
+      // =========================================================
+      // 5. CREAR VENTA
+      // =========================================================
+
+      const venta =
+        await tx.orm.public.Venta.create(
           {
-            productoId:
-              detalle.productoId,
             usuarioId,
-            tipo: 'VENTA',
-            estado: 'LLENO',
-            cantidad:
-              detalle.cantidad,
-            motivo: `Venta #${venta.id}`,
-            referencia: `VENTA-${venta.id}`,
+            clienteId: clienteId ?? null,
+            tipo,
+            total: total.toFixed(2),
           },
         );
 
-      movimientosInventario.push(
-        movimientoSalida,
-      );
+      // =========================================================
+      // 6. CREAR DETALLES
+      // =========================================================
 
-      // ---------------------------------------------------------
-      // SUMAR CILINDROS VACÍOS RECIBIDOS
-      // ---------------------------------------------------------
+      const detallesCreados = [];
 
-      if (detalle.vaciosRecibidos > 0) {
-        const nuevaCantidadVacios =
-          stockVacio.cantidad +
-          detalle.vaciosRecibidos;
+      for (const detalle of detallesPreparados) {
+        const detalleCreado =
+          await tx.orm.public.DetalleVenta.create(
+            {
+              ventaId: venta.id,
+              productoId:
+                detalle.productoId,
+              cantidad: detalle.cantidad,
+              precioUnitario:
+                detalle.precioUnitario.toFixed(
+                  2,
+                ),
+              subtotal:
+                detalle.subtotal.toFixed(2),
+              vaciosRecibidos:
+                detalle.vaciosRecibidos,
+            },
+          );
 
-        await this.databaseService.db.orm.public.Inventario
+        detallesCreados.push(
+          detalleCreado,
+        );
+      }
+
+      // =========================================================
+      // 7. ACTUALIZAR INVENTARIO
+      // =========================================================
+
+      const movimientosInventario = [];
+
+      for (const detalle of detallesPreparados) {
+        const stockLleno = inventarios.find(
+          (item) =>
+            item.productoId ===
+            detalle.productoId &&
+            item.estado === 'LLENO',
+        );
+
+        const stockVacio = inventarios.find(
+          (item) =>
+            item.productoId ===
+            detalle.productoId &&
+            item.estado === 'VACIO',
+        );
+
+        if (!stockLleno || !stockVacio) {
+          throw new BadRequestException(
+            `Inventario incompleto para ${detalle.producto.nombre}`,
+          );
+        }
+
+        // ---------------------------------------------------------
+        // RESTAR CILINDROS LLENOS
+        // ---------------------------------------------------------
+
+        const nuevaCantidadLlenos =
+          stockLleno.cantidad -
+          detalle.cantidad;
+
+        const actualizacionLlenos = await tx.orm.public.Inventario
           .where({
-            id: stockVacio.id,
+            id: stockLleno.id,
+            cantidad: stockLleno.cantidad,
           })
           .update({
-            cantidad:
-              nuevaCantidadVacios,
+            cantidad: nuevaCantidadLlenos,
           });
 
-        // -------------------------------------------------------
-        // REGISTRAR DEVOLUCIÓN
-        // -------------------------------------------------------
+        if (!actualizacionLlenos) {
+          throw new BadRequestException(
+            'El inventario cambió durante la venta. Intenta nuevamente.',
+          );
+        }
+        stockLleno.cantidad = nuevaCantidadLlenos;
 
-        const movimientoDevolucion =
-          await this.databaseService.db.orm.public.MovimientoInventario.create(
+        // ---------------------------------------------------------
+        // REGISTRAR MOVIMIENTO DE VENTA
+        // ---------------------------------------------------------
+
+        const movimientoSalida =
+          await tx.orm.public.MovimientoInventario.create(
             {
               productoId:
                 detalle.productoId,
               usuarioId,
-              tipo: 'DEVOLUCION',
-              estado: 'VACIO',
+              tipo: 'VENTA',
+              estado: 'LLENO',
               cantidad:
-                detalle.vaciosRecibidos,
-              motivo:
-                `Cilindros vacíos recibidos en venta #${venta.id}`,
-              referencia:
-                `VENTA-${venta.id}`,
+                detalle.cantidad,
+              motivo: `Venta #${venta.id}`,
+              referencia: `VENTA-${venta.id}`,
             },
           );
 
         movimientosInventario.push(
-          movimientoDevolucion,
+          movimientoSalida,
         );
+
+        // ---------------------------------------------------------
+        // SUMAR CILINDROS VACÍOS RECIBIDOS
+        // ---------------------------------------------------------
+
+        if (detalle.vaciosRecibidos > 0) {
+          const nuevaCantidadVacios =
+            stockVacio.cantidad +
+            detalle.vaciosRecibidos;
+
+          const actualizacionVacios = await tx.orm.public.Inventario
+            .where({
+              id: stockVacio.id,
+              cantidad: stockVacio.cantidad,
+            })
+            .update({ cantidad: nuevaCantidadVacios });
+
+          if (!actualizacionVacios) {
+            throw new BadRequestException(
+              'El inventario cambió durante la venta. Intenta nuevamente.',
+            );
+          }
+          stockVacio.cantidad = nuevaCantidadVacios;
+
+          // -------------------------------------------------------
+          // REGISTRAR DEVOLUCIÓN
+          // -------------------------------------------------------
+
+          const movimientoDevolucion =
+            await tx.orm.public.MovimientoInventario.create(
+              {
+                productoId:
+                  detalle.productoId,
+                usuarioId,
+                tipo: 'DEVOLUCION',
+                estado: 'VACIO',
+                cantidad:
+                  detalle.vaciosRecibidos,
+                motivo:
+                  `Cilindros vacíos recibidos en venta #${venta.id}`,
+                referencia:
+                  `VENTA-${venta.id}`,
+              },
+            );
+
+          movimientosInventario.push(
+            movimientoDevolucion,
+          );
+        }
       }
-    }
 
-    // =========================================================
-    // 8. CREAR CUENTA POR COBRAR SI ES CRÉDITO
-    // =========================================================
+      // =========================================================
+      // 8. CREAR CUENTA POR COBRAR SI ES CRÉDITO
+      // =========================================================
 
-    let cuentaCobrar = null;
+      let cuentaCobrar = null;
 
-    if (tipo === 'CREDITO') {
-      cuentaCobrar =
-        await this.databaseService.db.orm.public.CuentaCobrar.create(
-          {
-            ventaId: venta.id,
-            montoOriginal:
-              total.toFixed(2),
-            saldoPendiente:
-              total.toFixed(2),
-            estado: 'PENDIENTE',
-            fechaVencimiento:
-              fechaVencimiento ?? null,
-          },
-        );
-    }
+      if (tipo === 'CREDITO') {
+        cuentaCobrar =
+          await tx.orm.public.CuentaCobrar.create(
+            {
+              ventaId: venta.id,
+              montoOriginal:
+                total.toFixed(2),
+              saldoPendiente:
+                total.toFixed(2),
+              estado: 'PENDIENTE',
+              fechaVencimiento:
+                fechaVencimiento ?? null,
+            },
+          );
+      }
 
-    // =========================================================
-    // 9. RESPUESTA
-    // =========================================================
+      // =========================================================
+      // 9. RESPUESTA
+      // =========================================================
 
-    return {
-      mensaje:
-        'Venta registrada correctamente',
-      venta,
-      detalles: detallesCreados,
-      movimientosInventario,
-      cuentaCobrar,
-    };
+      return {
+        mensaje:
+          'Venta registrada correctamente',
+        venta,
+        detalles: detallesCreados,
+        movimientosInventario,
+        cuentaCobrar,
+      };
+    });
   }
   // =========================================================
   // ANULAR VENTA

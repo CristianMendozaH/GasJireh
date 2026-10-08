@@ -1,14 +1,24 @@
 <header class="top">
   <div>
     <h1>DASHBOARD</h1>
-    <p class="date">LUNES, 19 DE OCTUBRE 2026</p>
+    <p class="date">{{ fechaHoy }}</p>
   </div>
+  @if (puedeGestionarVentas) {
   <div class="acts">
     <button class="btn p" (click)="abrirModalVenta()"><i class="fa-solid fa-plus"></i>Nueva Venta</button>
     <button class="btn s" (click)="abrirModalAbono()"><i class="fa-solid fa-hand-holding-dollar"></i>Registrar
       Abono</button>
   </div>
+  }
 </header>
+
+@if (errorCarga) {
+<p style="color:#dc2626;margin:12px 0">{{ errorCarga }} <button class="btn s"
+    (click)="cargarDatos()">Reintentar</button></p>
+}
+@if (cargando) {
+<p style="margin:12px 0;color:#64748b">Cargando información del sistema...</p>
+}
 
 <section class="grid4">
   <div class="card kpi">
@@ -38,7 +48,7 @@
 </section>
 
 <section class="sec">
-  <h2>STOCK DE CILINDROS <a (click)="toast('Vista Inventario (prototipo)')">Ver inventario</a></h2>
+  <h2>STOCK DE CILINDROS <a routerLink="/inventario">Ver inventario</a></h2>
   <div class="grid3">
     @for (k of stockKeys; track k) {
     <div class="card stk">
@@ -53,11 +63,8 @@
 </section>
 
 <section class="sec">
-  <h2>TRANSACCIONES RECIENTES
-    @if (tx.length === 0) {
-    <a (click)="cargarDemo()"><i class="fa-solid fa-wand-magic-sparkles"></i> Cargar datos de ejemplo</a>
-    }
-  </h2>
+  <h2>TRANSACCIONES RECIENTES <a (click)="cargarDatos()" style="cursor:pointer"><i class="fa-solid fa-rotate"></i>
+      Actualizar</a></h2>
   <div class="card tw">
     <table>
       <thead>
@@ -83,9 +90,7 @@
         } @empty {
         <tr>
           <td colspan="6">
-            <div class="none">
-              <i class="fa-regular fa-folder-open"></i>No hay transacciones registradas
-            </div>
+            <div class="none"><i class="fa-regular fa-folder-open"></i>No hay transacciones registradas</div>
           </td>
         </tr>
         }
@@ -93,73 +98,3 @@
     </table>
   </div>
 </section>
-
-<!-- Modal Venta -->
-<div class="ov" [class.on]="modalVenta">
-  <div class="md">
-    <h3>Nueva venta</h3>
-    <div class="fld">
-      <label>Cliente</label>
-      <select [(ngModel)]="vCli">
-        <option value="Cliente de mostrador">Cliente de mostrador</option>
-        <option value="Tienda Doña Marta">Tienda Doña Marta</option>
-        <option value="Comedor San José">Comedor San José</option>
-        <option value="Restaurante El Fogón">Restaurante El Fogón</option>
-      </select>
-    </div>
-    <div class="two">
-      <div class="fld">
-        <label>Cilindro</label>
-        <select [(ngModel)]="vProd">
-          <option value="25">25 lb · Q 125</option>
-          <option value="35">35 lb · Q 170</option>
-          <option value="100">100 lb · Q 480</option>
-        </select>
-      </div>
-      <div class="fld">
-        <label>Cantidad</label>
-        <input type="number" [(ngModel)]="vQty" min="1">
-      </div>
-    </div>
-    <div class="fld">
-      <label>Método de pago</label>
-      <select [(ngModel)]="vMet">
-        <option value="Contado">Contado</option>
-        <option value="Crédito">Crédito</option>
-      </select>
-    </div>
-    <div class="mf">
-      <button class="btn s" (click)="cerrarModales()">Cancelar</button>
-      <button class="btn p" (click)="guardarVenta()">Guardar venta</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Abono -->
-<div class="ov" [class.on]="modalAbono">
-  <div class="md">
-    <h3>Registrar abono</h3>
-    <div class="fld">
-      <label>Cliente</label>
-      <select [(ngModel)]="aCli">
-        <option value="Tienda Doña Marta">Tienda Doña Marta</option>
-        <option value="Comedor San José">Comedor San José</option>
-        <option value="Restaurante El Fogón">Restaurante El Fogón</option>
-      </select>
-    </div>
-    <div class="fld">
-      <label>Monto del abono (Q)</label>
-      <input type="number" [(ngModel)]="aMonto" min="1">
-    </div>
-    <div class="mf">
-      <button class="btn s" (click)="cerrarModales()">Cancelar</button>
-      <button class="btn p" (click)="guardarAbono()">Guardar abono</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div class="toast" [class.on]="toastVisible">
-  <i class="fa-solid fa-circle-check"></i>
-  <span>{{ toastMsg }}</span>
-</div>

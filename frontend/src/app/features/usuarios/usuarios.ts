@@ -47,12 +47,28 @@ export class Usuarios implements OnInit {
   readonly errorFormulario = signal('');
   readonly mensajeExito = signal('');
   readonly mostrarPassword = signal(false);
+  readonly accion = signal<"editar" | "password" | "estado" | null>(null);
+  readonly mostrarPasswordAccion = signal(false);
+  readonly seleccionado = signal<Usuario | null>(null);
+  edicion = { nombreCompleto: '', username: '', rol: 'VENDEDOR' as RolApi };
+  nuevaPassword = '';
+  readonly errorAccion = signal('');
+  readonly procesandoAccion = signal(false);
 
   formulario: NuevoUsuario = this.formularioVacio();
 
   readonly totalUsuarios = computed(() => this.users().length);
   readonly usuariosActivos = computed(() => this.users().filter(u => u.active).length);
   readonly usuariosInactivos = computed(() => this.totalUsuarios() - this.usuariosActivos());
+
+  esCuentaPropia(u: Usuario): boolean {
+    try {
+      const raw = localStorage.getItem('usuario') ?? sessionStorage.getItem('usuario');
+      if (!raw) return false;
+      const actual = JSON.parse(raw) as { id?: number };
+      return actual.id === u.id;
+    } catch { return false; }
+  }
 
   ngOnInit(): void {
     this.cargarUsuarios();
@@ -158,6 +174,69 @@ export class Usuarios implements OnInit {
         } else {
           this.errorFormulario.set('No se pudo crear el usuario. Intenta nuevamente.');
         }
+      },
+    });
+  }
+
+  abrirAccion(tipo: "editar" | "password" | "estado", u: Usuario): void {
+    this.seleccionado.set(u);
+    this.accion.set(tipo);
+    this.errorAccion.set('');
+    this.nuevaPassword = '';
+    this.mostrarPasswordAccion.set(false);
+    this.edicion = { nombreCompleto: u.name, username: u.user, rol: this.rolApi(u.role) };
+  }
+
+  cerrarAccion(): void {
+    if (!this.procesandoAccion()) { this.accion.set(null); this.seleccionado.set(null); }
+  }
+
+  private rolApi(rol: Usuario['role']): RolApi {
+    return rol === 'Administrador' ? 'ADMINISTRADOR' : rol === 'Bodeguero' ? 'BODEGUERO' : 'VENDEDOR';
+  }
+
+  guardarAccion(): void {
+    const u = this.seleccionado();
+    const tipo = this.accion();
+    if (!u || !tipo || this.procesandoAccion()) return;
+    if (tipo === 'estado' && this.esCuentaPropia(u)) {
+      this.errorAccion.set('No puedes desactivar tu propia cuenta.'); return;
+    }
+    if (tipo === 'editar' && this.esCuentaPropia(u) && this.edicion.rol !== 'ADMINISTRADOR') {
+      this.errorAccion.set('No puedes quitarte el rol de administrador.'); return;
+    }
+    let datos: object;
+    let url = `${this.apiUrl}/${u.id}`;
+    if (tipo === 'editar') {
+      const nombreCompleto = this.edicion.nombreCompleto.trim();
+      const username = this.edicion.username.trim().toLowerCase();
+      if (!nombreCompleto || nombreCompleto.length > 120 || !/^[a-z0-9._-]{3,30}$/.test(username)) {
+        this.errorAccion.set('Revisa el nombre completo y el usuario (3 a 30 caracteres, sin espacios).'); return;
+      }
+      datos = { nombreCompleto, username, rol: this.edicion.rol };
+    } else if (tipo === 'password') {
+      if (this.nuevaPassword.length < 8 || this.nuevaPassword.length > 128) {
+        this.errorAccion.set('La contraseña debe tener entre 8 y 128 caracteres.'); return;
+      }
+      url += '/password';
+      datos = { password: this.nuevaPassword };
+    } else {
+      url += '/estado';
+      datos = { activo: !u.active };
+    }
+    this.procesandoAccion.set(true);
+    this.errorAccion.set('');
+    this.http.patch(url, datos).subscribe({
+      next: () => {
+        this.procesandoAccion.set(false);
+        this.cerrarAccion();
+        this.mensajeExito.set('Cambios guardados correctamente.');
+        this.cargarUsuarios();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.procesandoAccion.set(false);
+        const msg = error.error?.message;
+        this.errorAccion.set(Array.isArray(msg) ? msg.join(' · ') : typeof msg === 'string' ? msg : 'No se pudieron guardar los cambios.');
       },
     });
   }

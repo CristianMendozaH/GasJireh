@@ -1,19 +1,17 @@
+
 import {
     Body,
     Controller,
+    ForbiddenException,
     Get,
     Post,
     Req,
     UseGuards,
 } from '@nestjs/common';
 
-import {
-    InventarioService,
-} from './inventario.service.js';
+import { InventarioService } from './inventario.service.js';
 
-import {
-    CreateMovimientoInventarioDto,
-} from './dto/create-movimiento-inventario.dto.js';
+import { CreateMovimientoInventarioDto } from './dto/create-movimiento-inventario.dto.js';
 
 import {
     JwtAuthGuard,
@@ -21,57 +19,74 @@ import {
 } from '../auth/guards/jwt-auth.guard.js';
 
 @Controller('inventario')
+@UseGuards(JwtAuthGuard)
 export class InventarioController {
     constructor(
-        private readonly inventarioService:
-            InventarioService,
+        private readonly inventarioService: InventarioService,
     ) { }
 
-    // =========================================================
-    // OBTENER INVENTARIO
-    // =========================================================
+    // ==========================================
+    // CONSULTAR INVENTARIO
+    // ==========================================
 
     @Get()
-    @UseGuards(JwtAuthGuard)
     findAll() {
         return this.inventarioService.findAll();
     }
 
-    // =========================================================
-    // OBTENER HISTORIAL DE MOVIMIENTOS
-    // =========================================================
+    // ==========================================
+    // CONSULTAR HISTORIAL DE MOVIMIENTOS
+    // ==========================================
 
     @Get('movimientos')
-    @UseGuards(JwtAuthGuard)
     findMovimientos() {
         return this.inventarioService.findMovimientos();
     }
 
-    // =========================================================
+    // ==========================================
     // INICIALIZAR INVENTARIO
-    // =========================================================
+    // SOLO ADMINISTRADOR
+    // ==========================================
 
     @Post('inicializar')
-    inicializar() {
+    inicializar(
+        @Req() request: RequestConUsuario,
+    ) {
+        const usuario = request.usuario!;
+
+        if (usuario.rol !== 'ADMINISTRADOR') {
+            throw new ForbiddenException(
+                'Solo el administrador puede inicializar el inventario',
+            );
+        }
+
         return this.inventarioService.inicializar();
     }
 
-    // =========================================================
-    // REGISTRAR MOVIMIENTO
-    // =========================================================
+    // ==========================================
+    // REGISTRAR MOVIMIENTO MANUAL
+    // ADMINISTRADOR Y BODEGUERO
+    // ==========================================
 
     @Post('movimientos')
-    @UseGuards(JwtAuthGuard)
     registrarMovimiento(
-        @Body()
-        dto: CreateMovimientoInventarioDto,
-
-        @Req()
-        request: RequestConUsuario,
+        @Body() dto: CreateMovimientoInventarioDto,
+        @Req() request: RequestConUsuario,
     ) {
+        const usuario = request.usuario!;
+
+        if (
+            usuario.rol !== 'ADMINISTRADOR' &&
+            usuario.rol !== 'BODEGUERO'
+        ) {
+            throw new ForbiddenException(
+                'No tienes permisos para registrar movimientos de inventario',
+            );
+        }
+
         return this.inventarioService.registrarMovimiento(
             dto,
-            request.usuario!.sub,
+            usuario.sub,
         );
     }
 }

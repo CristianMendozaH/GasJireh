@@ -41,6 +41,7 @@ export interface CuentaCliente {
   name: string;
   tel: string;
   debt: number;
+  fechaVenta: string;
   last: string;
   st: EstadoCuenta;
   ventaId?: number;
@@ -129,6 +130,9 @@ export class CuentasCobrar implements OnInit {
         name: c.cliente?.nombre ?? 'Cliente no identificado',
         tel: c.cliente?.telefono || '—',
         debt: Number(c.saldoPendiente) || 0,
+        fechaVenta: c.venta?.creadoEn
+          ? this.fechaAbono(c.venta.creadoEn)
+          : (c.creadoEn ? this.fechaAbono(c.creadoEn) : '—'),
         last: ultimos.has(c.id)
           ? ultimos.get(c.id)!.toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })
           : '—',

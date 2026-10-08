@@ -3,11 +3,9 @@
     <h1>GESTIÓN DE USUARIOS</h1>
     <p class="subt">Administra las cuentas de acceso al sistema</p>
   </div>
-  <button type="button" class="btn p" (click)="abrirNuevoUsuario()">
-    <i class="fa-solid fa-plus"></i> Nuevo Usuario
-  </button>
+  <button type="button" class="btn p" (click)="abrirNuevoUsuario()"><i class="fa-solid fa-plus"></i> Nuevo
+    Usuario</button>
 </header>
-
 <section class="grid3">
   <div class="card kpi">
     <div class="lb">TOTAL USUARIOS<span class="ic" style="background:var(--or-l);color:var(--or)"><i
@@ -25,12 +23,11 @@
     <div class="v">{{ usuariosInactivos() }}</div>
   </div>
 </section>
-
-<p class="subt" *ngIf="cargando()">Cargando usuarios desde PostgreSQL...</p>
-<p class="subt" *ngIf="errorCarga()" role="alert">{{ errorCarga() }} <button type="button" class="btn s"
-    (click)="cargarUsuarios()">Reintentar</button></p>
-<p *ngIf="mensajeExito()" role="status" style="margin:14px 0;color:#16845b;font-weight:600">{{ mensajeExito() }}</p>
-
+@if (cargando()) { <p class="subt">Cargando usuarios desde PostgreSQL...</p> }
+@if (errorCarga()) { <p class="subt" role="alert">{{ errorCarga() }} <button type="button" class="btn s"
+    (click)="cargarUsuarios()">Reintentar</button></p> }
+@if (mensajeExito()) { <p class="uj-success" role="status"><i class="fa-solid fa-circle-check"></i> {{ mensajeExito() }}
+</p> }
 <div class="card tw">
   <table>
     <thead>
@@ -55,78 +52,117 @@
         <td><span class="tag" [class.on]="u.active" [class.of]="!u.active">{{ u.active ? 'Activo' : 'Inactivo' }}</span>
         </td>
         <td>
-          <div class="ac"><span class="un">Próximamente</span></div>
+          <div class="ac uj-actions">
+            <button type="button" class="uj-icon-button" (click)="abrirAccion('editar',u)"
+              [attr.aria-label]="'Editar ' + u.name" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" class="uj-icon-button uj-toggle" (click)="abrirAccion('estado',u)"
+              [disabled]="esCuentaPropia(u)" [attr.aria-label]="(u.active ? 'Desactivar ' : 'Activar ') + u.name"
+              [title]="esCuentaPropia(u) ? 'No disponible para tu propia cuenta' : (u.active ? 'Desactivar' : 'Activar')"><i
+                class="fa-solid" [ngClass]="u.active ? 'fa-user-slash' : 'fa-user-check'"></i></button>
+            <button type="button" class="uj-icon-button uj-key" (click)="abrirAccion('password',u)"
+              [attr.aria-label]="'Cambiar contraseña de ' + u.name" title="Cambiar contraseña"><i
+                class="fa-solid fa-key"></i></button>
+          </div>
         </td>
       </tr>
-      } @empty {
-      <tr>
+      } @empty { <tr>
         <td colspan="6">
-          <div class="none"><i class="fa-regular fa-folder-open"></i> {{ cargando() ? 'Cargando usuarios...' :
+          <div class="none"><i class="fa-regular fa-folder-open"></i>{{ cargando() ? 'Cargando usuarios...' :
             (errorCarga() ? 'No se pudo mostrar el listado' : 'No hay usuarios registrados') }}</div>
         </td>
-      </tr>
-      }
+      </tr> }
     </tbody>
   </table>
 </div>
 
 @if (modalAbierto()) {
-<div role="presentation"
-  style="position:fixed;inset:0;background:rgba(19,30,53,.57);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
-  <section role="dialog" aria-modal="true" aria-labelledby="tituloNuevoUsuario"
-    style="background:#fff;border-radius:16px;width:100%;max-width:490px;padding:28px;box-shadow:0 18px 55px rgba(0,0,0,.2);color:#27364d">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:8px">
-      <h2 id="tituloNuevoUsuario" style="margin:0;font-size:21px;font-weight:800">Nuevo usuario</h2>
-      <button type="button" (click)="cerrarModal()" [disabled]="guardando()" aria-label="Cerrar formulario"
-        style="border:0;background:transparent;font-size:24px;cursor:pointer;color:#64748b">&times;</button>
-    </div>
-    <p style="margin:0 0 22px;color:#7a869c;font-size:13px">Crea una cuenta de acceso para un empleado de Gas Jireh.</p>
-
-    <form (ngSubmit)="guardarUsuario()" #nuevoUsuarioForm="ngForm" style="display:grid;gap:15px">
-      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
-        Nombre completo
-        <input name="nombreCompleto" [(ngModel)]="formulario.nombreCompleto" required maxlength="120"
-          autocomplete="name" placeholder="Ej. Carlos Mora"
-          style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;width:100%;box-sizing:border-box" />
-      </label>
-      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
-        Nombre de usuario
-        <input name="username" [(ngModel)]="formulario.username" required minlength="3" maxlength="30"
-          pattern="[a-z0-9._-]{3,30}" autocomplete="off" placeholder="Ej. carlos"
-          style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;width:100%;box-sizing:border-box" />
-        <small style="color:#7a869c;font-weight:400">De 3 a 30 caracteres, en minúsculas y sin espacios.</small>
-      </label>
-      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
-        Contraseña
-        <span style="display:flex;gap:8px">
-          <input name="password" [(ngModel)]="formulario.password" [type]="mostrarPassword() ? 'text' : 'password'"
-            required minlength="8" maxlength="128" autocomplete="new-password" placeholder="Mínimo 8 caracteres"
-            style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;flex:1;min-width:0" />
-          <button type="button" (click)="mostrarPassword.set(!mostrarPassword())"
-            [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            style="border:1px solid #dce1ea;background:#fff;border-radius:9px;padding:0 12px;cursor:pointer"><i
-              class="fa-solid" [ngClass]="mostrarPassword() ? 'fa-eye-slash' : 'fa-eye'"></i></button>
-        </span>
-      </label>
-      <label style="display:grid;gap:6px;font-size:13px;font-weight:600">
-        Rol del empleado
-        <select name="rol" [(ngModel)]="formulario.rol" required
-          style="padding:12px;border:1px solid #dce1ea;border-radius:9px;font:inherit;background:#fff">
-          <option value="VENDEDOR">Vendedor</option>
-          <option value="BODEGUERO">Bodeguero</option>
-          <option value="ADMINISTRADOR">Administrador</option>
-        </select>
-      </label>
-      <p style="margin:0;font-size:12px;color:#7a869c">El usuario se creará con estado <strong>Activo</strong>.</p>
-      @if (errorFormulario()) {
-      <p role="alert" style="margin:0;padding:11px;border-radius:8px;background:#fff0f0;color:#b4232c;font-size:13px">{{
-        errorFormulario() }}</p>
-      }
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:7px">
-        <button type="button" class="btn s" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
-        <button type="submit" class="btn p" [disabled]="guardando() || nuevoUsuarioForm.invalid">{{ guardando() ?
-          'Guardando...' : 'Crear usuario' }}</button>
+<div class="uj-overlay" role="presentation">
+  <section class="uj-modal" role="dialog" aria-modal="true" aria-labelledby="uj-crear-titulo">
+    <h3 id="uj-crear-titulo">NUEVO USUARIO</h3>
+    <p class="uj-sub">Crea una cuenta de acceso al sistema.</p>
+    <form (ngSubmit)="guardarUsuario()" #nuevoUsuarioForm="ngForm">
+      <div class="uj-field"><label for="uj-nombre">NOMBRE COMPLETO</label><input id="uj-nombre" name="nombreCompleto"
+          [(ngModel)]="formulario.nombreCompleto" required maxlength="120" autocomplete="name"
+          placeholder="Ej. María López"></div>
+      <div class="uj-two">
+        <div class="uj-field"><label for="uj-username">NOMBRE DE USUARIO</label><input id="uj-username" name="username"
+            [(ngModel)]="formulario.username" required minlength="3" maxlength="30" pattern="[a-z0-9._-]{3,30}"
+            autocomplete="off" placeholder="maria"></div>
+        <div class="uj-field"><label for="uj-rol">ROL</label><select id="uj-rol" name="rol" [(ngModel)]="formulario.rol"
+            required>
+            <option value="VENDEDOR">Vendedor</option>
+            <option value="BODEGUERO">Bodeguero</option>
+            <option value="ADMINISTRADOR">Administrador</option>
+          </select></div>
       </div>
+      <div class="uj-field"><label for="uj-pass">CONTRASEÑA</label>
+        <div class="uj-password"><input id="uj-pass" name="password" [(ngModel)]="formulario.password"
+            [type]="mostrarPassword() ? 'text' : 'password'" required minlength="8" maxlength="128"
+            autocomplete="new-password" placeholder="Mínimo 8 caracteres"><button type="button"
+            (click)="mostrarPassword.set(!mostrarPassword())"
+            [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"><i class="fa-solid"
+              [ngClass]="mostrarPassword() ? 'fa-eye-slash' : 'fa-eye'"></i></button></div>
+      </div>
+      @if (errorFormulario()) { <p class="uj-error" role="alert">{{ errorFormulario() }}</p> }
+      <div class="uj-footer"><button type="button" class="btn s" (click)="cerrarModal()"
+          [disabled]="guardando()">Cancelar</button><button type="submit" class="btn p"
+          [disabled]="guardando() || nuevoUsuarioForm.invalid"><i class="fa-solid fa-check"></i> {{ guardando() ?
+          'Guardando...' : 'Guardar usuario' }}</button></div>
+    </form>
+  </section>
+</div>
+}
+
+@if (accion() && seleccionado(); as u) {
+<div class="uj-overlay" role="presentation">
+  <section class="uj-modal" role="dialog" aria-modal="true" aria-labelledby="uj-accion-titulo">
+    @if (accion() === 'estado') {
+    <div class="uj-warning">
+      <div class="uj-warning-icon" [class.uj-activate]="!u.active"><i class="fa-solid"
+          [ngClass]="u.active ? 'fa-user-slash' : 'fa-user-check'"></i></div>
+      <h3 id="uj-accion-titulo">{{ u.active ? 'DESACTIVAR USUARIO' : 'ACTIVAR USUARIO' }}</h3>
+      <p class="uj-sub">¿Confirmas que deseas {{ u.active ? 'desactivar' : 'activar' }} la cuenta de <strong>{{ u.name
+          }}</strong> ({{ u.user }})?</p>
+    </div>
+    } @else {
+    <h3 id="uj-accion-titulo">{{ accion() === 'editar' ? 'EDITAR USUARIO' : 'CAMBIAR CONTRASEÑA' }}</h3>
+    <p class="uj-sub">{{ accion() === 'editar' ? 'Actualiza los datos de la cuenta.' : 'Establece una nueva contraseña
+      para ' + u.user + '.' }}</p>
+    }
+    <form (ngSubmit)="guardarAccion()" #accionForm="ngForm">
+      @if (accion() === 'editar') {
+      <div class="uj-field"><label for="uj-edit-nombre">NOMBRE COMPLETO</label><input id="uj-edit-nombre"
+          name="nombreCompleto" [(ngModel)]="edicion.nombreCompleto" required maxlength="120"
+          placeholder="Nombre completo"></div>
+      <div class="uj-two">
+        <div class="uj-field"><label for="uj-edit-user">NOMBRE DE USUARIO</label><input id="uj-edit-user"
+            name="username" [(ngModel)]="edicion.username" required minlength="3" maxlength="30"
+            pattern="[a-z0-9._-]{3,30}"></div>
+        <div class="uj-field"><label for="uj-edit-rol">ROL</label><select id="uj-edit-rol" name="rol"
+            [(ngModel)]="edicion.rol" required>
+            <option value="VENDEDOR">Vendedor</option>
+            <option value="BODEGUERO">Bodeguero</option>
+            <option value="ADMINISTRADOR">Administrador</option>
+          </select></div>
+      </div>
+      } @else if (accion() === 'password') {
+      <div class="uj-field"><label for="uj-edit-password">NUEVA CONTRASEÑA</label>
+        <div class="uj-password"><input id="uj-edit-password" name="password" [(ngModel)]="nuevaPassword"
+            [type]="mostrarPasswordAccion() ? 'text' : 'password'" required minlength="8" maxlength="128"
+            autocomplete="new-password" placeholder="Mínimo 8 caracteres"><button type="button"
+            (click)="mostrarPasswordAccion.set(!mostrarPasswordAccion())"
+            [attr.aria-label]="mostrarPasswordAccion() ? 'Ocultar contraseña' : 'Mostrar contraseña'"><i
+              class="fa-solid" [ngClass]="mostrarPasswordAccion() ? 'fa-eye-slash' : 'fa-eye'"></i></button></div>
+      </div>
+      }
+      @if (errorAccion()) { <p class="uj-error" role="alert">{{ errorAccion() }}</p> }
+      <div class="uj-footer" [class.uj-center]="accion() === 'estado'"><button type="button" class="btn s"
+          (click)="cerrarAccion()" [disabled]="procesandoAccion()">Cancelar</button><button type="submit" class="btn"
+          [ngClass]="accion() === 'estado' && u.active ? 'd' : 'p'"
+          [disabled]="procesandoAccion() || accionForm.invalid"><i class="fa-solid"
+            [ngClass]="accion() === 'estado' ? (u.active ? 'fa-user-slash' : 'fa-user-check') : 'fa-check'"></i> {{
+          procesandoAccion() ? 'Guardando...' : accion() === 'estado' ? (u.active ? 'Sí, desactivar' : 'Sí, activar') :
+          'Guardar cambios' }}</button></div>
     </form>
   </section>
 </div>

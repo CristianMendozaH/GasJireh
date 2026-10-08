@@ -1,6 +1,6 @@
 <header class="top">
   <h1>CONTROL DE INVENTARIO</h1>
-  <button class="btn g" (click)="abrirModalEntrada()">
+  <button *ngIf="puedeRegistrarEntrada" class="btn g" (click)="abrirModalEntrada()">
     <i class="fa-solid fa-plus"></i>Entrada de Proveedor
   </button>
 </header>

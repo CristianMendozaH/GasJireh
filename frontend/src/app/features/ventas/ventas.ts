@@ -871,6 +871,9 @@ export class Ventas implements OnInit {
             cantidad:
               item.qty,
 
+            precioUnitario:
+              Number(item.price),
+
             vaciosRecibidos:
               item.vaciosRecibidos
 

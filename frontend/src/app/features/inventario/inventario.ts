@@ -24,6 +24,7 @@ import {
   forkJoin,
 } from 'rxjs';
 
+
 // =========================================================
 // INTERFACES
 // =========================================================
@@ -143,6 +144,18 @@ export class Inventario implements OnInit {
   // =========================================================
 
   modalVisible = false;
+
+  get puedeRegistrarEntrada(): boolean {
+    try {
+      const sesion = localStorage.getItem('usuario') ?? sessionStorage.getItem('usuario');
+      const token = localStorage.getItem('accessToken') ?? sessionStorage.getItem('accessToken');
+      if (!sesion || !token) return false;
+      const usuario = JSON.parse(sesion) as { rol?: string };
+      return usuario.rol === 'ADMINISTRADOR' || usuario.rol === 'BODEGUERO';
+    } catch {
+      return false;
+    }
+  }
 
   mTam = '25';
 
@@ -604,6 +617,9 @@ export class Inventario implements OnInit {
   // =========================================================
 
   abrirModalEntrada(): void {
+    if (!this.puedeRegistrarEntrada) {
+      return;
+    }
 
     this.mQty =
       null;
@@ -675,6 +691,10 @@ export class Inventario implements OnInit {
   // =========================================================
 
   guardarEntrada(): void {
+    if (!this.puedeRegistrarEntrada) {
+      this.toast('No tienes permisos para registrar entradas de proveedor');
+      return;
+    }
 
     if (
       this.guardandoEntrada

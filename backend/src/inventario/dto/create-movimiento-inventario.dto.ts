@@ -1,13 +1,32 @@
+import {
+    IsInt,
+    IsIn,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Min,
+} from 'class-validator';
+
 export class CreateMovimientoInventarioDto {
-    productoId: number;
+    @IsInt()
+    @Min(1)
+    productoId!: number;
 
-    tipo: 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'VENTA' | 'DEVOLUCION';
+    @IsIn(['ENTRADA', 'SALIDA', 'AJUSTE', 'VENTA', 'DEVOLUCION'])
+    tipo!: 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'VENTA' | 'DEVOLUCION';
 
-    estado: 'LLENO' | 'VACIO';
+    @IsIn(['LLENO', 'VACIO'])
+    estado!: 'LLENO' | 'VACIO';
 
-    cantidad: number;
+    @IsInt()
+    @Min(1)
+    cantidad!: number;
 
+    @IsOptional()
+    @IsString()
     motivo?: string;
 
+    @IsOptional()
+    @IsString()
     referencia?: string;
 }

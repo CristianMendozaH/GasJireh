@@ -59,6 +59,7 @@
         <th>CLIENTE</th>
         <th>TELÉFONO</th>
         <th>DEUDA TOTAL</th>
+        <th>FECHA DE VENTA</th>
         <th>ÚLTIMO PAGO</th>
         <th>ESTADO</th>
         <th>ACCIONES</th>
@@ -69,6 +70,7 @@
         <td class="cl">{{ r.name }}</td>
         <td>{{ r.tel }}</td>
         <td class="debt" [class.z]="r.debt === 0">{{ money(r.debt) }}</td>
+        <td>{{ r.fechaVenta }}</td>
         <td>{{ r.last }}</td>
         <td>
           <span class="tag" [ngClass]="cls[r.st]">{{ r.st }}</span>
@@ -86,7 +88,7 @@
         </td>
       </tr>
       <tr *ngIf="filteredRows.length === 0">
-        <td colspan="6">
+        <td colspan="7">
           <div class="none">
             <i class="fa-regular fa-folder-open"></i>
             {{ cargando ? 'Cargando...' : 'No hay cuentas en esta categoría' }}
