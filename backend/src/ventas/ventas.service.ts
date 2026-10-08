@@ -398,6 +398,84 @@ export class VentasService {
     );
 
     // =========================================================
+    // VALIDAR LÍMITE DE CRÉDITO ANTES DE CREAR LA VENTA
+    // =========================================================
+
+    if (tipo === 'CREDITO') {
+      const clientes =
+        await this.databaseService.db.orm.public.Cliente.all();
+
+      const cliente = clientes.find(
+        (item) => item.id === clienteId,
+      );
+
+      if (!cliente) {
+        throw new NotFoundException(
+          `Cliente ${clienteId} no encontrado`,
+        );
+      }
+
+      if (cliente.estado !== 'ACTIVO') {
+        throw new BadRequestException(
+          'El cliente está inactivo y no puede comprar al crédito',
+        );
+      }
+
+      const limiteCredito = Number(cliente.limiteCredito);
+
+      if (!Number.isFinite(limiteCredito) || limiteCredito <= 0) {
+        throw new BadRequestException(
+          'El cliente no tiene crédito autorizado',
+        );
+      }
+
+      const cuentas =
+        await this.databaseService.db.orm.public.CuentaCobrar.all();
+
+      const ventas =
+        await this.databaseService.db.orm.public.Venta.all();
+
+      const ventasVigentes = new Set(
+        ventas
+          .filter(
+            (venta) =>
+              venta.clienteId === clienteId &&
+              venta.estado !== 'ANULADA',
+          )
+          .map((venta) => venta.id),
+      );
+
+      const deudaActual = cuentas
+        .filter((cuenta) => ventasVigentes.has(cuenta.ventaId))
+        .reduce(
+          (acumulado, cuenta) =>
+            acumulado + Number(cuenta.saldoPendiente),
+          0,
+        );
+
+      if (!Number.isFinite(deudaActual)) {
+        throw new BadRequestException(
+          'No se pudo calcular la deuda actual del cliente',
+        );
+      }
+
+      // Comparamos centavos para evitar diferencias por decimales.
+      const limiteCentavos = Math.round(limiteCredito * 100);
+      const deudaCentavos = Math.round(deudaActual * 100);
+      const ventaCentavos = Math.round(total * 100);
+      const disponibleCentavos = limiteCentavos - deudaCentavos;
+
+      if (ventaCentavos > disponibleCentavos) {
+        const disponible = Math.max(0, disponibleCentavos) / 100;
+        throw new BadRequestException(
+          `Crédito insuficiente para ${cliente.nombre}. ` +
+          `Disponible: Q${disponible.toFixed(2)}. ` +
+          `Total de la venta: Q${total.toFixed(2)}.`,
+        );
+      }
+    }
+
+    // =========================================================
     // 3. OBTENER INVENTARIO
     // =========================================================
 

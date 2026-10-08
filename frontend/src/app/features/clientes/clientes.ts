@@ -9,6 +9,8 @@ import {
   CommonModule,
 } from '@angular/common';
 
+import { forkJoin } from 'rxjs';
+
 import {
   FormsModule,
 } from '@angular/forms';
@@ -18,6 +20,7 @@ import {
   ClientesService,
   CrearClienteDto,
   ActualizarClienteDto,
+  CuentaCobrarApi,
 } from './clientes.service';
 
 // =========================================================
@@ -181,50 +184,35 @@ export class Clientes implements OnInit {
 
     this.errorClientes = '';
 
-    this.clientesService
-      .obtenerClientes()
-      .subscribe({
+    forkJoin({
+      clientes: this.clientesService.obtenerClientes(),
+      cuentas: this.clientesService.obtenerCuentasCobrar(),
+    }).subscribe({
 
-        next: (
-          clientes:
-            ClienteApi[],
-        ) => {
+      next: ({ clientes, cuentas }) => {
+        this.clients = clientes.map(cliente =>
+          this.transformarCliente(cliente, cuentas),
+        );
+        this.cargandoClientes = false;
+        this.cdr.detectChanges();
+      },
 
-          console.log(
-            'Clientes recibidos:',
-            clientes,
-          );
+      error: (error) => {
 
-          this.clients =
-            clientes.map(
-              (cliente) =>
-                this.transformarCliente(
-                  cliente,
-                ),
-            );
+        console.error(
+          'Error al cargar clientes:',
+          error,
+        );
 
-          this.cargandoClientes =
-            false;
+        this.errorClientes =
+          'No fue posible cargar los clientes';
 
-          this.cdr.detectChanges();
-        },
+        this.cargandoClientes =
+          false;
 
-        error: (error) => {
-
-          console.error(
-            'Error al cargar clientes:',
-            error,
-          );
-
-          this.errorClientes =
-            'No fue posible cargar los clientes';
-
-          this.cargandoClientes =
-            false;
-
-          this.cdr.detectChanges();
-        },
-      });
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   // =======================================================
@@ -233,6 +221,7 @@ export class Clientes implements OnInit {
 
   private transformarCliente(
     cliente: ClienteApi,
+    cuentas: CuentaCobrarApi[] = [],
   ): Client {
 
     const limite =
@@ -255,6 +244,23 @@ export class Clientes implements OnInit {
     const autorizado =
       limite > 0;
 
+    const cuentasCliente = cuentas.filter(cuenta =>
+      cuenta.cliente?.id === cliente.id &&
+      Number(cuenta.saldoPendiente) > 0,
+    );
+    const deuda = Math.round(cuentasCliente.reduce(
+      (total, cuenta) => total + Number(cuenta.saldoPendiente), 0,
+    ) * 100) / 100;
+    const ahora = Date.now();
+    const vencida = cuentasCliente.some(cuenta =>
+      cuenta.estado === 'VENCIDA' ||
+      (cuenta.fechaVencimiento !== null &&
+        new Date(cuenta.fechaVencimiento).getTime() < ahora),
+    );
+    const estadoDeuda: Client['st'] = vencida
+      ? 'Vencido'
+      : deuda > 0 ? 'Pendiente' : 'Al Día';
+
     return {
       id:
         cliente.id,
@@ -273,18 +279,8 @@ export class Clientes implements OnInit {
       nit:
         cliente.nit ?? '',
 
-      /*
-       * Todavía no calculamos deuda desde
-       * CuentaCobrar.
-       *
-       * Eso lo conectaremos después.
-       */
-
-      st:
-        'Al Día',
-
-      debt:
-        0,
+      st: estadoDeuda,
+      debt: deuda,
 
       limit:
         limite,

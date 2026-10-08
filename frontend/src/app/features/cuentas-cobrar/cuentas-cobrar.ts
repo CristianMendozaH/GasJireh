@@ -1,16 +1,32 @@
-import { Component, HostListener } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 export type EstadoCuenta = 'Vencido' | 'Pendiente' | 'Al Día';
 
-export interface CuentaCliente {
+interface CuentaApi {
   id: number;
+  cliente: { id: number; nombre: string; telefono?: string | null } | null;
+  venta?: { id: number; tipo: string; total: string; creadoEn: string };
+  montoOriginal: string;
+  totalAbonado: string;
+  saldoPendiente: string;
+  estado: 'PENDIENTE' | 'PARCIAL' | 'PAGADA' | 'VENCIDA';
+  fechaVencimiento?: string | null;
+  cantidadAbonos?: number;
+  creadoEn?: string;
+}
+
+export interface CuentaCliente {
+  id: number; // Identificador de la cuenta por cobrar, no del cliente
   name: string;
   tel: string;
   debt: number;
   last: string;
   st: EstadoCuenta;
+  ventaId?: number;
 }
 
 @Component({
@@ -20,124 +36,131 @@ export interface CuentaCliente {
   templateUrl: './cuentas-cobrar.html',
   styleUrl: './cuentas-cobrar.css'
 })
-export class CuentasCobrar {
-  readonly TODAY = '2026-10-19';
-
-  rows: CuentaCliente[] = [
-    { id: 0, name: 'Restaurante El Fogón', tel: '8888-1254', debt: 1550, last: '2026-08-18', st: 'Vencido' },
-    { id: 1, name: 'Soda Doña Carmen', tel: '7654-9998', debt: 342, last: '2026-07-30', st: 'Pendiente' },
-    { id: 2, name: 'Hotel Vista Volcán', tel: '2222-5678', debt: 0, last: '2026-09-20', st: 'Al Día' },
-    { id: 3, name: 'Comidas Rápidas Pérez', tel: '6543-8811', debt: 760, last: '2026-07-30', st: 'Vencido' }
-  ];
-
-  kpi = {
-    tot: 2952,
-    ven: 2610,
-    cob: 2400
-  };
-
+export class CuentasCobrar implements OnInit {
+  private readonly api = 'http://localhost:3000';
+  rows: CuentaCliente[] = [];
+  kpi = { tot: 0, ven: 0, cob: 0 };
+  // La API de cuentas devuelve totales abonados históricos, no cobros por fecha.
+  // Cobros hoy queda en cero hasta disponer de un GET /abonos con fechas.
+  cargando = false;
+  errorCarga = '';
+  guardando = false;
   filter: 'all' | EstadoCuenta = 'all';
   cls: Record<EstadoCuenta, string> = {
-    'Vencido': 'v',
-    'Pendiente': 'pe',
-    'Al Día': 'ok'
+    'Vencido': 'v', 'Pendiente': 'pe', 'Al Día': 'ok'
   };
-
-  // Modal y Abonos
   modalAbonoVisible = false;
   cuentaSeleccionada: CuentaCliente | null = null;
-  montoAbono: number = 0;
+  montoAbono = 0;
   errorMsg = '';
-
-  // Toast
   toastVisible = false;
   toastMsg = '';
-  private toastTimer: any;
+  private toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor(private readonly http: HttpClient, private readonly cdr: ChangeDetectorRef) { }
+
+  ngOnInit(): void { void this.cargarCuentas(); }
+
+  private fechaLocalISO(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  private estadoVisual(c: CuentaApi): EstadoCuenta {
+    if (Number(c.saldoPendiente) <= 0 || c.estado === 'PAGADA') return 'Al Día';
+    if (c.estado === 'VENCIDA' || (c.fechaVencimiento && c.fechaVencimiento.slice(0, 10) < this.fechaLocalISO())) return 'Vencido';
+    return 'Pendiente';
+  }
+
+  async cargarCuentas(): Promise<void> {
+    this.cargando = true;
+    this.errorCarga = '';
+    try {
+      const cuentas = await firstValueFrom(this.http.get<CuentaApi[]>(`${this.api}/cuentas-cobrar`));
+      this.rows = cuentas.map(c => ({
+        id: c.id,
+        name: c.cliente?.nombre ?? 'Cliente no identificado',
+        tel: c.cliente?.telefono || '—',
+        debt: Number(c.saldoPendiente) || 0,
+        last: '—', // El endpoint no incluye la fecha del último abono.
+        st: this.estadoVisual(c),
+        ventaId: c.venta?.id
+      }));
+      this.kpi.tot = this.rows.reduce((s, r) => s + r.debt, 0);
+      this.kpi.ven = this.rows.filter(r => r.st === 'Vencido').reduce((s, r) => s + r.debt, 0);
+      this.kpi.cob = 0; // No inventar el dato de cobros de hoy.
+    } catch {
+      this.errorCarga = 'No se pudieron cargar las cuentas. Comprueba que NestJS esté ejecutándose.';
+      this.rows = [];
+      this.kpi = { tot: 0, ven: 0, cob: 0 };
+    } finally {
+      this.cargando = false;
+      this.cdr.detectChanges();
+    }
+  }
 
   get filteredRows(): CuentaCliente[] {
-    if (this.filter === 'all') {
-      return this.rows;
-    }
-    return this.rows.filter(r => r.st === this.filter);
+    return this.filter === 'all' ? this.rows : this.rows.filter(r => r.st === this.filter);
   }
-
-  setFilter(f: 'all' | EstadoCuenta) {
-    this.filter = f;
-  }
-
-  countByStatus(st: EstadoCuenta): number {
-    return this.rows.filter(r => r.st === st).length;
-  }
-
+  setFilter(f: 'all' | EstadoCuenta): void { this.filter = f; }
+  countByStatus(st: EstadoCuenta): number { return this.rows.filter(r => r.st === st).length; }
   money(n: number): string {
-    return 'Q ' + (n || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return 'Q ' + (Number(n) || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-
-  toast(m: string) {
+  toast(m: string): void {
     this.toastMsg = m;
     this.toastVisible = true;
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => {
-      this.toastVisible = false;
-    }, 2600);
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => { this.toastVisible = false; }, 2600);
   }
-
-  abrirModalAbono(cuenta: CuentaCliente) {
+  abrirModalAbono(cuenta: CuentaCliente): void {
+    if (cuenta.debt <= 0) return;
     this.cuentaSeleccionada = cuenta;
-    this.montoAbono = cuenta.debt;
+    this.montoAbono = 0;
     this.errorMsg = '';
     this.modalAbonoVisible = true;
   }
-
-  cerrarModal() {
+  cerrarModal(): void {
+    if (this.guardando) return;
     this.modalAbonoVisible = false;
     this.cuentaSeleccionada = null;
   }
-
-  cerrarModalPorBackdrop(e: MouseEvent) {
-    if ((e.target as HTMLElement).classList.contains('ov')) {
-      this.cerrarModal();
-    }
+  cerrarModalPorBackdrop(e: MouseEvent): void {
+    if ((e.target as HTMLElement).classList.contains('ov')) this.cerrarModal();
   }
-
   @HostListener('document:keydown.escape')
-  handleEscape() {
-    if (this.modalAbonoVisible) {
-      this.cerrarModal();
-    }
-  }
+  handleEscape(): void { if (this.modalAbonoVisible) this.cerrarModal(); }
 
-  guardarAbono() {
-    if (!this.cuentaSeleccionada) return;
-
-    const m = Math.round((Number(this.montoAbono) || 0) * 100) / 100;
-
-    if (isNaN(m) || m <= 0) {
+  async guardarAbono(): Promise<void> {
+    if (!this.cuentaSeleccionada || this.guardando) return;
+    const m = Math.round(Number(this.montoAbono) * 100) / 100;
+    if (!Number.isFinite(m) || m <= 0) {
       this.errorMsg = 'Ingresa un monto mayor a Q 0.00';
       return;
     }
-
     if (m > this.cuentaSeleccionada.debt) {
       this.errorMsg = `El abono no puede superar la deuda (${this.money(this.cuentaSeleccionada.debt)})`;
       return;
     }
-
-    if (this.cuentaSeleccionada.st === 'Vencido') {
-      this.kpi.ven = Math.max(0, this.kpi.ven - m);
+    this.guardando = true;
+    this.errorMsg = '';
+    const nombre = this.cuentaSeleccionada.name;
+    try {
+      await firstValueFrom(this.http.post(`${this.api}/abonos`, {
+        cuentaCobrarId: this.cuentaSeleccionada.id,
+        monto: m
+      }));
+      this.guardando = false;
+      this.cerrarModal();
+      await this.cargarCuentas();
+      this.toast(`Abono de ${this.money(m)} registrado a ${nombre}`);
+      this.cdr.detectChanges();
+    } catch (e: unknown) {
+      this.guardando = false;
+      const err = e as { error?: { message?: string | string[] } };
+      const message = err?.error?.message;
+      this.errorMsg = Array.isArray(message) ? message.join(', ') : (message || 'No se pudo guardar el abono.');
+      this.cdr.detectChanges();
     }
-
-    this.kpi.tot = Math.max(0, this.kpi.tot - m);
-    this.kpi.cob += m;
-
-    this.cuentaSeleccionada.debt = Math.round((this.cuentaSeleccionada.debt - m) * 100) / 100;
-    this.cuentaSeleccionada.last = this.TODAY;
-
-    if (this.cuentaSeleccionada.debt === 0) {
-      this.cuentaSeleccionada.st = 'Al Día';
-    }
-
-    const clienteNombre = this.cuentaSeleccionada.name;
-    this.cerrarModal();
-    this.toast(`Abono de ${this.money(m)} registrado a ${clienteNombre}`);
   }
 }

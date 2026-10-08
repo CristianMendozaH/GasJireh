@@ -9,6 +9,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 
 import {
   VentasService,
@@ -38,6 +39,12 @@ interface Client {
 }
 
 
+interface CuentaCobrarApi {
+  cliente: { id: number } | null;
+  saldoPendiente: string | number;
+  estado: string;
+}
+
 interface CartItem {
   id: number;
   name: string;
@@ -61,6 +68,7 @@ interface CartItem {
 export class Ventas implements OnInit {
 
   private readonly ventasService = inject(VentasService);
+  private readonly http = inject(HttpClient);
 
 
   // =========================================================
@@ -223,13 +231,15 @@ export class Ventas implements OnInit {
     forkJoin({
       productos: this.ventasService.getProductos(),
       inventario: this.ventasService.getInventario(),
-      clientes: this.ventasService.getClientes()
+      clientes: this.ventasService.getClientes(),
+      cuentas: this.http.get<CuentaCobrarApi[]>('http://localhost:3000/cuentas-cobrar')
     }).subscribe({
 
       next: ({
         productos,
         inventario,
-        clientes
+        clientes,
+        cuentas
       }) => {
 
         this.procesarProductos(
@@ -238,7 +248,8 @@ export class Ventas implements OnInit {
         );
 
         this.procesarClientes(
-          clientes
+          clientes,
+          cuentas
         );
 
         this.loadingData.set(false);
@@ -339,8 +350,19 @@ export class Ventas implements OnInit {
   // =========================================================
 
   private procesarClientes(
-    clientes: ClienteApi[]
+    clientes: ClienteApi[],
+    cuentas: CuentaCobrarApi[]
   ): void {
+
+    const deudasPorCliente = new Map<number, number>();
+
+    for (const cuenta of cuentas) {
+      if (!cuenta.cliente || cuenta.estado === 'PAGADA') continue;
+      const saldo = Number(cuenta.saldoPendiente);
+      if (!Number.isFinite(saldo) || saldo <= 0) continue;
+      const id = cuenta.cliente.id;
+      deudasPorCliente.set(id, (deudasPorCliente.get(id) ?? 0) + saldo);
+    }
 
     const clientesUi: Client[] =
       clientes
@@ -362,9 +384,7 @@ export class Ventas implements OnInit {
             cliente.limiteCredito ?? 0
           ),
 
-          // Temporalmente inicia en 0.
-          // Después conectaremos las cuentas por cobrar.
-          debt: 0,
+          debt: deudasPorCliente.get(cliente.id) ?? 0,
 
           estado:
             cliente.estado
@@ -379,6 +399,12 @@ export class Ventas implements OnInit {
     this.clients.set(
       clientesUi
     );
+
+    // Sincronizar también el cliente que permanece seleccionado.
+    const seleccionado = this.selectedClient();
+    if (seleccionado) {
+      this.selectedClient.set(clientesUi.find(c => c.id === seleccionado.id) ?? null);
+    }
 
   }
 

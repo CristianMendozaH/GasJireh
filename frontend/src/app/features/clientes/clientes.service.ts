@@ -63,6 +63,15 @@ export interface ActualizarClienteDto {
   'ACTIVO' | 'INACTIVO';
 }
 
+// Cuentas por cobrar devueltas por GET /cuentas-cobrar
+export interface CuentaCobrarApi {
+  id: number;
+  cliente: { id: number; nombre: string; telefono: string | null } | null;
+  saldoPendiente: string | number;
+  estado: 'PENDIENTE' | 'PARCIAL' | 'PAGADA' | 'VENCIDA';
+  fechaVencimiento: string | null;
+}
+
 // =========================================================
 // SERVICE
 // =========================================================
@@ -89,6 +98,12 @@ export class ClientesService {
       ClienteApi[]
     >(
       `${this.apiUrl}?t=${Date.now()}`,
+    );
+  }
+
+  obtenerCuentasCobrar(): Observable<CuentaCobrarApi[]> {
+    return this.http.get<CuentaCobrarApi[]>(
+      `http://localhost:3000/cuentas-cobrar?t=${Date.now()}`,
     );
   }
 
