@@ -26,8 +26,6 @@
 @if (cargando()) { <p class="subt">Cargando usuarios desde PostgreSQL...</p> }
 @if (errorCarga()) { <p class="subt" role="alert">{{ errorCarga() }} <button type="button" class="btn s"
     (click)="cargarUsuarios()">Reintentar</button></p> }
-@if (mensajeExito()) { <p class="uj-success" role="status"><i class="fa-solid fa-circle-check"></i> {{ mensajeExito() }}
-</p> }
 <div class="card tw">
   <table>
     <thead>
@@ -165,5 +163,17 @@
           'Guardar cambios' }}</button></div>
     </form>
   </section>
+</div>
+}
+@if (toastVisible()) {
+<div class="uj-toast" role="status" aria-live="polite" aria-atomic="true">
+  <span class="uj-toast-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+  <div class="uj-toast-content">
+    <strong>{{ tituloToast() }}</strong>
+    <span>{{ mensajeExito() }}</span>
+  </div>
+  <button type="button" class="uj-toast-close" (click)="cerrarToast()" aria-label="Cerrar notificación" title="Cerrar">
+    <i class="fa-solid fa-xmark"></i>
+  </button>
 </div>
 }

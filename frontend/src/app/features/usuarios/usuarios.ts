@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
@@ -35,7 +35,7 @@ interface NuevoUsuario {
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.css',
 })
-export class Usuarios implements OnInit {
+export class Usuarios implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'http://localhost:3000/usuarios';
 
@@ -46,6 +46,9 @@ export class Usuarios implements OnInit {
   readonly guardando = signal(false);
   readonly errorFormulario = signal('');
   readonly mensajeExito = signal('');
+  readonly tituloToast = signal('');
+  readonly toastVisible = signal(false);
+  private temporizadorToast: ReturnType<typeof setTimeout> | null = null;
   readonly mostrarPassword = signal(false);
   readonly accion = signal<"editar" | "password" | "estado" | null>(null);
   readonly mostrarPasswordAccion = signal(false);
@@ -72,6 +75,26 @@ export class Usuarios implements OnInit {
 
   ngOnInit(): void {
     this.cargarUsuarios();
+  }
+
+  ngOnDestroy(): void {
+    this.cerrarToast();
+  }
+
+  private mostrarToast(titulo: string, descripcion: string): void {
+    if (this.temporizadorToast !== null) clearTimeout(this.temporizadorToast);
+    this.tituloToast.set(titulo);
+    this.mensajeExito.set(descripcion);
+    this.toastVisible.set(true);
+    this.temporizadorToast = setTimeout(() => this.cerrarToast(), 3500);
+  }
+
+  cerrarToast(): void {
+    if (this.temporizadorToast !== null) {
+      clearTimeout(this.temporizadorToast);
+      this.temporizadorToast = null;
+    }
+    this.toastVisible.set(false);
   }
 
   cargarUsuarios(): void {
@@ -108,7 +131,7 @@ export class Usuarios implements OnInit {
   abrirNuevoUsuario(): void {
     this.formulario = this.formularioVacio();
     this.errorFormulario.set('');
-    this.mensajeExito.set('');
+    this.cerrarToast();
     this.mostrarPassword.set(false);
     this.modalAbierto.set(true);
   }
@@ -155,7 +178,7 @@ export class Usuarios implements OnInit {
         this.guardando.set(false);
         this.modalAbierto.set(false);
         this.formulario = this.formularioVacio();
-        this.mensajeExito.set(`Usuario «${datos.username}» creado correctamente.`);
+        this.mostrarToast('Usuario creado', `La cuenta «${datos.username}» se creó correctamente.`);
         this.cargarUsuarios();
       },
       error: (error: HttpErrorResponse) => {
@@ -230,7 +253,17 @@ export class Usuarios implements OnInit {
       next: () => {
         this.procesandoAccion.set(false);
         this.cerrarAccion();
-        this.mensajeExito.set('Cambios guardados correctamente.');
+        const titulo = tipo === 'editar'
+          ? 'Usuario actualizado'
+          : tipo === 'password'
+            ? 'Contraseña actualizada'
+            : u.active ? 'Usuario desactivado' : 'Usuario activado';
+        const descripcion = tipo === 'editar'
+          ? `Los datos de «${u.user}» se guardaron correctamente.`
+          : tipo === 'password'
+            ? `Se actualizó la contraseña de «${u.user}».`
+            : `La cuenta «${u.user}» fue ${u.active ? 'desactivada' : 'activada'} correctamente.`;
+        this.mostrarToast(titulo, descripcion);
         this.cargarUsuarios();
       },
       error: (error: HttpErrorResponse) => {

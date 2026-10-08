@@ -32,7 +32,7 @@
           <label for="u">USUARIO</label>
           <div class="ctl">
             <i class="fa-regular fa-user l"></i>
-            <input type="text" id="u" name="usuario" [(ngModel)]="usuario" (input)="errUsuario = false"
+            <input type="text" id="u" name="usuario" [(ngModel)]="usuario" (input)="errUsuario = false; errorLogin = ''"
               placeholder="Ingresa tu usuario" autocomplete="username" autocapitalize="off" spellcheck="false">
           </div>
           @if (errUsuario) {
@@ -48,7 +48,8 @@
           <div class="ctl pw">
             <i class="fa-solid fa-lock l"></i>
             <input [type]="mostrarPassword ? 'text' : 'password'" id="p" name="password" [(ngModel)]="password"
-              (input)="errPassword = false" placeholder="Ingresa tu contraseña" autocomplete="current-password">
+              (input)="errPassword = false; errorLogin = ''" placeholder="Ingresa tu contraseña"
+              autocomplete="current-password">
             <button type="button" class="eye" (click)="togglePassword()"
               [attr.aria-label]="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
               title="Mostrar / ocultar contraseña">
@@ -69,7 +70,6 @@
             <span class="bx"><i class="fa-solid fa-check"></i></span>
             Recordarme
           </label>
-          <a href="#" class="forgot" (click)="toggleNota($event)">¿Olvidaste tu contraseña?</a>
         </div>
 
         @if (mostrarNota) {
@@ -77,6 +77,13 @@
           <i class="fa-solid fa-circle-info"></i>
           <span>Las cuentas son administradas por el Administrador del sistema. Solicítale que restablezca tu
             contraseña.</span>
+        </div>
+        }
+
+        @if (errorLogin) {
+        <div class="login-error" role="alert" aria-live="assertive">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span>{{ errorLogin }}</span>
         </div>
         }
 
@@ -93,12 +100,6 @@
         @if (exito) {
         <div class="okmsg on" role="status">
           <i class="fa-solid fa-circle-check"></i>Inicio de sesión correcto
-        </div>
-        }
-        @if (errorLogin) {
-        <div class="login-error" role="alert">
-          <i class="fa-solid fa-circle-exclamation"></i>
-          <span>{{ errorLogin }}</span>
         </div>
         }
       </form>
